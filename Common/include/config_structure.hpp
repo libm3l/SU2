@@ -697,7 +697,10 @@ private:
   *Plunging_Omega_Z,           /*!< \brief Angular frequency of the mesh plunging in the z-direction. */
   *Plunging_Ampl_X,           /*!< \brief Plunging amplitude in the x-direction. */
   *Plunging_Ampl_Y,           /*!< \brief Plunging amplitude in the y-direction. */
-  *Plunging_Ampl_Z;           /*!< \brief Plunging amplitude in the z-direction. */
+  *Plunging_Ampl_Z,           /*!< \brief Plunging amplitude in the z-direction. */
+  *Angle_Roll,          /*!< \brief Rolling angle. */
+  *Angle_Pitch,           /*!< \brief Pitching angle. */
+  *Angle_Yaw;           /*!< \brief Plunging angle. */  
   unsigned short nMotion_Origin_X,    /*!< \brief Number of X-coordinate mesh motion origins. */
 	nMotion_Origin_Y,           /*!< \brief Number of Y-coordinate mesh motion origins. */
 	nMotion_Origin_Z,           /*!< \brief Number of Z-coordinate mesh motion origins. */
@@ -4256,10 +4259,59 @@ public:
 	void SetMotion_Origin_Z(unsigned short val_iZone, su2double val_origin);
 
 	/*!
-	 * \brief Get the translational velocity of the mesh in the x-direction.
+	 * \brief Set the translational velocity of the mesh in the x-direction.
 	 * \param[in] val_iZone - Number for the current zone in the mesh (each zone has independent motion).
 	 * \return Translational velocity of the mesh in the x-direction.
 	 */
+	
+	void SetRoll(unsigned short val_iZone, su2double val_origin);
+
+	/*!
+	 * \brief Set the roll angle.
+	 * \param[in] val_iZone - Number for the current zone in the mesh (each zone has independent motion).
+	 * \return Roll angle.
+	 */
+	
+	void SetPitch(unsigned short val_iZone, su2double val_origin);
+
+	/*!
+	 * \brief Set the pitch angle.
+	 * \param[in] val_iZone - Number for the current zone in the mesh (each zone has independent motion).
+	 * \return Pitch angle.
+	 */
+	
+	void SetYaw(unsigned short val_iZone, su2double val_origin);
+
+	/*!
+	 * \brief Set the yaw angle.
+	 * \param[in] val_iZone - Number for the current zone in the mesh (each zone has independent motion).
+	 * \return Pitch yaw.
+	 */
+	
+	su2double GetRoll(unsigned short val_iZone);
+
+	/*!
+	 * \brief Get roll angle
+	 * \param[in] val_iZone - Number for the current zone in the mesh (each zone has independent motion).
+	 * \return Roll angle.
+	 */
+	
+	su2double GetPitch(unsigned short val_iZone);
+
+	/*!
+	 * \brief Get pitch angle
+	 * \param[in] val_iZone - Number for the current zone in the mesh (each zone has independent motion).
+	 * \return Pitch angle.
+	 */
+	
+	su2double GetYaw(unsigned short val_iZone);
+
+	/*!
+	 * \brief Get yaw angle
+	 * \param[in] val_iZone - Number for the current zone in the mesh (each zone has independent motion).
+	 * \return Yaw angle.
+	 */
+	
 	su2double GetTranslation_Rate_X(unsigned short val_iZone);
 
 	/*!

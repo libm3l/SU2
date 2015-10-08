@@ -514,6 +514,18 @@ inline void CConfig::SetMotion_Origin_Y(unsigned short val_iZone, su2double val_
 
 inline void CConfig::SetMotion_Origin_Z(unsigned short val_iZone, su2double val_origin) { Motion_Origin_Z[val_iZone] = val_origin; }
 
+inline su2double CConfig::GetRoll(unsigned short val_iZone) { return Angle_Roll[val_iZone]; }
+
+inline su2double CConfig::GetPitch(unsigned short val_iZone) { return Angle_Pitch[val_iZone]; }
+
+inline su2double CConfig::GetYaw(unsigned short val_iZone) { return Angle_Yaw[val_iZone]; }
+
+inline void CConfig::SetRoll(unsigned short val_iZone, su2double val_origin) { Angle_Roll[val_iZone] = val_origin; }
+
+inline void CConfig::SetPitch(unsigned short val_iZone, su2double val_origin) { Angle_Pitch[val_iZone] = val_origin; }
+
+inline void CConfig::SetYaw(unsigned short val_iZone, su2double val_origin) { Angle_Yaw[val_iZone] = val_origin; }
+
 inline su2double CConfig::GetTranslation_Rate_X(unsigned short val_iZone) { return  Translation_Rate_X[val_iZone]; }
 
 inline su2double CConfig::GetTranslation_Rate_Y(unsigned short val_iZone) { return  Translation_Rate_Y[val_iZone]; }
