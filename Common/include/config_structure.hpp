@@ -725,7 +725,10 @@ private:
 	nPlunging_Ampl_X,           /*!< \brief Number of Plunging amplitudes in the x-direction. */
 	nPlunging_Ampl_Y,           /*!< \brief Number of Plunging amplitudes in the y-direction. */
 	nPlunging_Ampl_Z,           /*!< \brief Number of Plunging amplitudes in the z-direction. */
-  nMoveMotion_Origin,         /*!< \brief Number of motion origins. */
+ 	nAngle_Yaw,           /*!< \brief Number of yaw angles */
+	nAngle_Pitch,           /*!< \brief Number of pitch angles */
+	nAngle_Roll,           /*!< \brief Number of roll angles in */
+	nMoveMotion_Origin,         /*!< \brief Number of motion origins. */
   *MoveMotion_Origin;         /*!< \brief Keeps track if we should move moment origin. */
   vector<vector<vector<su2double> > > Aeroelastic_np1, /*!< \brief Aeroelastic solution at time level n+1. */
   Aeroelastic_n, /*!< \brief Aeroelastic solution at time level n. */

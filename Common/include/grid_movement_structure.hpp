@@ -983,15 +983,18 @@ public:
    * \param[in] UpdateGeo - Update geometry.
    */
   
-  	void D6dof_motion(CGeometry *geometry, CConfig *config, unsigned short iZone, unsigned long iter, d6dof_t *motion_data, d6dof_t *motion_data_old);
+  	void D6dof_motion(CGeometry *geometry, CConfig *config, unsigned short iZone, unsigned long iter, d6dof_t *motion_data, 
+			  d6dof_t *motion_data_old, int status_run);
 	
   /*!
 	 * \brief Unsteady pitching grid movement using rigid mesh motion.
 	 * \param[in] geometry - Geometrical definition of the problem.
 	 * \param[in] config - Definition of the particular problem.
    * \param[in] iZone - Zone number in the mesh.
-   * \param[in] iter - Physical time iteration number.
-   */
+   * \param[in] motion_data - angles, displacement and rotation center from current iteration.
+      * \param[in] motion_data - angles, displacement and rotation center from previous iteration.
+  * \param[in] status_run - if 0 no previous data exist, if 1 previous data exist.
+ */
   
   void SetVolume_Scaling(CGeometry *geometry, CConfig *config, bool UpdateGeo);
   

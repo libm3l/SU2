@@ -1854,12 +1854,17 @@ void SetGrid_Movement(CGeometry **geometry_container, CSurfaceMovement *surface_
       
     case EXTERNAL: 
   /*
-  * motion prescribed by external solver
+  * motion prescribed by external solver, get the previous iteration 
+  * rotational angles, displacement and rotation center
   */
-  
-      p_6DOFdata_old->angles[0] = config_container->GetMotion_Origin_X(iZone);;
-      p_6DOFdata_old->angles[1] = p_6DOFdata->angles[1];
-      p_6DOFdata_old->angles[2] = p_6DOFdata->angles[2];
+      p_6DOFdata_old->angles[0] = config_container->GetYaw(iZone);
+      p_6DOFdata_old->angles[1] = config_container->GetPitch(iZone);
+      p_6DOFdata_old->angles[2] = config_container->GetRoll(iZone);
+      
+      p_6DOFdata_old->rotcenter[0] = config_container->GetMotion_Origin_X(iZone);
+      p_6DOFdata_old->rotcenter[1] = config_container->GetMotion_Origin_Y(iZone);
+      p_6DOFdata_old->rotcenter[2] = config_container->GetMotion_Origin_Z(iZone);
+
       if (rank == MASTER_NODE){
  /*
   * MASTER node communicate with external solver
@@ -1884,21 +1889,31 @@ void SetGrid_Movement(CGeometry **geometry_container, CSurfaceMovement *surface_
       SU2_MPI::Bcast(p_6DOFdata->rotcenter, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
       SU2_MPI::Bcast(p_6DOFdata->transvec, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
 #endif
-      
-//       iZone = ZONE_0;
+
 /*
- * NOTE: save temporarily previous pitch angle in variable storing rotation center 
- * so that you can turn mesh back to its original
- * position. In the final version this has to be fixed
+ * Save previous data, they are needed to transform the mesh back to its original position
  */
-      config_container->SetMotion_Origin_X(iZone,p_6DOFdata->angles[0]);
-//       config_container->SetMotion_Origin_X(iZone,p_6DOFdata->angles[1]);
-//       config_container->SetMotion_Origin_X(iZone,p_6DOFdata->angles[2]);
+      config_container->SetMotion_Origin_X(iZone,p_6DOFdata->rotcenter[0]);
+      config_container->SetMotion_Origin_Y(iZone,p_6DOFdata->rotcenter[1]);
+      config_container->SetMotion_Origin_Z(iZone,p_6DOFdata->rotcenter[2]);
       
-          cout << endl << " Moving mesh" << endl;
-      grid_movement->D6dof_motion(geometry_container[MESH_0],
-                                    config_container, iZone, ExtIter,p_6DOFdata,p_6DOFdata_old);
+      config_container->SetYaw(iZone,p_6DOFdata->angles[0]);
+      config_container->SetPitch(iZone,p_6DOFdata->angles[1]);
+      config_container->SetRoll(iZone,p_6DOFdata->angles[2]);
       
+      cout << endl << " Moving mesh" << endl;
+      
+      if(ExtIter == 0)
+/*
+ * if the very first iteration, do not transform mesh back, it is in original position
+ */
+         grid_movement->D6dof_motion(geometry_container[MESH_0],
+                                    config_container, iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,0);
+       else
+         grid_movement->D6dof_motion(geometry_container[MESH_0],
+                                    config_container, iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,1);
+	 
+	 
       geometry_container[MESH_0]->SetGridVelocity(config_container, ExtIter);
       
       /*--- Update the multigrid structure after moving the finest grid,
