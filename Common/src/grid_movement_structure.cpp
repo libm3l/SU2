@@ -2595,9 +2595,9 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 	unsigned long iPoint;
 	su2double r[3] = {0.0,0.0,0.0}, rotCoord[3] = {0.0,0.0,0.0}, *Coord;
 	su2double rotMatrix[3][3] = {{0.0,0.0,0.0}, {0.0,0.0,0.0}, {0.0,0.0,0.0}};
-	su2double AM[3][3],BM[3][3],CM[3][3];
+	su2double rotMatrixo[3][3] = {{0.0,0.0,0.0}, {0.0,0.0,0.0}, {0.0,0.0,0.0}};
 	su2double dtheta, dphi, dpsi, cosTheta, sinTheta, cosThetao, sinThetao,sinPsio,cosPsio;
-	su2double cosPhi, sinPhi,cosPhio, sinPhio, cosPsi, sinPsi,x,xn,y,yn,xno,yno;
+	su2double cosPhi, sinPhi,cosPhio, sinPhio, cosPsi, sinPsi,x,xn,y,yn,z,zn,xno,yno;
 	su2double rotXold, rotYold, rotZold,dthetao, dphio, dpsio;
 	bool time_spectral = (config->GetUnsteady_Simulation() == TIME_SPECTRAL);
 	bool adjoint = config->GetAdjoint();
@@ -2627,9 +2627,9 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
   dpsi   = motion_data->angles[0]*3.1415926/180.;  // yaw  
 
   if(nDim == 3){
-     dthetao   = motion_data_old->angles[2]*3.1415926/180.;  // pitch
-     dphio   = motion_data_old->angles[1]*3.1415926/180.;  // pitch
-     dpsio   = motion_data_old->angles[0]*3.1415926/180.;  // pitch
+     dthetao   =- motion_data_old->angles[2]*3.1415926/180.;  // pitch
+     dphio      = -motion_data_old->angles[1]*3.1415926/180.;  // roll
+     dpsio      = -motion_data_old->angles[0]*3.1415926/180.;  // yaw
      
      rotXold = motion_data_old->rotcenter[0];
      rotYold = motion_data_old->rotcenter[1];
@@ -2652,44 +2652,9 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
   
 	/*--- Compute the rotation matrix. Note that the implicit
    ordering is rotation about the x-axis, y-axis, then z-axis. ---*/
-  
-// 	AM[0][0] = cosPsi;
-// 	AM[0][0] = sinPsi;
-//  	AM[0][0] =0.;
-//         AM[1][1] = -sinPsi;
-//         AM[1][1] = cosPsi;
-//         AM[1][1] = 0.; 
-//         AM[2][2] = 0;
-//         AM[2][2] = 0;
-//         AM[2][2] = 1;
-// 
-// 	BM[0][0] = cosTheta;
-// 	BM[0][0] = 0;
-//  	BM[0][0] =sinTheta;
-//         BM[1][1] = 0;
-//         BM[1][1] = 1;
-//         BM[1][1] = 0.; 
-//         BM[2][2] = -sinTheta;
-//         BM[2][2] = 0;
-//         BM[2][2] = cosTheta;      
-// 
-// 	
-// 	CM[0][0] = 1;
-// 	CM[0][0] = 0;
-//  	CM[0][0] =0.;
-//         CM[1][1] = 0;
-//         CM[1][1] = cosPhi;
-//         CM[1][1] =sinPhi.; 
-//         CM[2][2] = 0;
-//         CM[2][2] = -sinPhi;
-//         CM[2][2] = cosPhi;
-// 	
-// 	M1[0][0]=
-//        
-//         MAT     = MATMUL(C,B)
-//         OMG_MAT = MATMUL(MAT, A)
 	
 	if(nDim == 3){
+		
 		rotMatrix[0][0] = cosPhi*cosPsi;
 		rotMatrix[1][0] = cosPhi*sinPsi;
 		rotMatrix[2][0] = -sinPhi;
@@ -2701,6 +2666,18 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 		rotMatrix[0][2] = cosTheta*sinPhi*cosPsi + sinTheta*sinPsi;
 		rotMatrix[1][2] = cosTheta*sinPhi*sinPsi - sinTheta*cosPsi;
 		rotMatrix[2][2] = cosTheta*cosPhi;
+		
+		rotMatrixo[0][0] = cosPhio*cosPsio;
+		rotMatrixo[1][0] = cosPhio*sinPsio;
+		rotMatrixo[2][0] = -sinPhio;
+  
+		rotMatrixo[0][1] = sinThetao*sinPhio*cosPsio - cosThetao*sinPsio;
+		rotMatrixo[1][1] = sinThetao*sinPhio*sinPsio + cosThetao*cosPsio;
+		rotMatrixo[2][1] = sinThetao*cosPhio;
+  
+		rotMatrixo[0][2] = cosThetao*sinPhio*cosPsio + sinThetao*sinPsio;
+		rotMatrixo[1][2] = cosThetao*sinPhio*sinPsio - sinThetao*cosPsio;
+		rotMatrixo[2][2] = cosThetao*cosPhio;
   
 /*--- Loop over and rotate each node in the volume mesh ---*/
 		for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++) {
@@ -2709,9 +2686,22 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 			Coord   = geometry->node[iPoint]->GetCoord(); 
    
     /*--- Calculate non-dim. position from rotation center ---*/
-			r[0] = (Coord[0]-motion_data->rotcenter[0]);
-			r[1] = (Coord[1]-motion_data->rotcenter[1]);
-			r[2] = (Coord[2]-motion_data->rotcenter[2]);
+			x = (Coord[0]-rotXold);
+			y = (Coord[1]-rotYold);
+			z = (Coord[2]-rotZold);
+			
+  /*--- Compute transformed point coordinates ---*/
+			r[0] = rotMatrixo[0][0]*x 
+			+ rotMatrixo[0][1]*y 
+			+ rotMatrixo[0][2]*z;
+    
+			r[1] = rotMatrixo[1][0]*x 
+			+ rotMatrixo[1][1]*y 
+			+ rotMatrixo[1][2]*z;
+    
+			r[2] = rotMatrixo[2][0]*x 
+			+ rotMatrixo[2][1]*y 
+			+ rotMatrixo[2][2]*z;
   
     /*--- Compute transformed point coordinates ---*/
 			rotCoord[0] = rotMatrix[0][0]*r[0] 
