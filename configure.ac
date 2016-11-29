@@ -186,16 +186,25 @@ fi
 AM_CONDITIONAL(BUILD_PARMETIS, test x$enableparmetis = xyes)
 AC_CONFIG_FILES([externals/parmetis/Makefile])
 
+
 # CGNS
 CONFIGURE_CGNS
 if (test $enablecgns = yes); then
   su2_externals_INCLUDES="-DHAVE_CGNS $CGNS_INCLUDE $su2_externals_INCLUDES"
   su2_externals_LIBS="$CGNS_LIB $su2_externals_LIBS"
+
+su2_externals_INCLUDES="$su2_externals_INCLUDES -I/home/jiraseka/Cprogs/libm3l/Source/data_util -I/home/jiraseka/Cprogs/libm3l/Source/data_util -lrt"
+#su2_externals_LIBS="$su2_externals_LIBS  /home/jka/Cprograms/Sources/lsipdx/Source/libm3lsipdx.a -lpthread "
+
+#su2_externals_LIBS="$su2_externals_LIBS /extra2/JKA/Cprograms/lsipdx/Source/libm3llsipdx.a"
+su2_externals_LIBS="$su2_externals_LIBS -L/home/jiraseka/Cprogs/lsipdx/Source -lm3llsipdx -Wl,-rpath=/home/jiraseka/Cprogs/lsipdx/Source"
+
 else
   su2_externals_INCLUDES="$su2_externals_INCLUDES"
 fi
 AM_CONDITIONAL(BUILD_CGNS, test x$enablecgns = xyes)
 AC_CONFIG_FILES([externals/cgns/Makefile])
+
 
 AC_SUBST([su2_externals_INCLUDES])
 AC_SUBST([su2_externals_LIBS])

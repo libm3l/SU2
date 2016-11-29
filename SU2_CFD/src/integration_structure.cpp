@@ -571,17 +571,20 @@ void CIntegration::SetDualTime_Solver(CGeometry *geometry, CSolver *solver, CCon
 	for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++) {
 		solver->node[iPoint]->Set_Solution_time_n1();
 		solver->node[iPoint]->Set_Solution_time_n();
-    
-		geometry->node[iPoint]->SetVolume_nM1();
-		geometry->node[iPoint]->SetVolume_n();
+/*
+ * this somehow does not make sense to me, if the volumes are
+ * different, than coorinates are different too
+ */
+// 		geometry->node[iPoint]->SetVolume_nM1();
+// 		geometry->node[iPoint]->SetVolume_n();
     
 		/*--- Store old coordinates in case there is grid movement ---*/
-    
 		if (config->GetGrid_Movement()) {
 			geometry->node[iPoint]->SetCoord_n1();
 			geometry->node[iPoint]->SetCoord_n();
 		}
 	}
+	
   
   /*--- Store old aeroelastic solutions ---*/
   if (config->GetGrid_Movement() && config->GetAeroelastic_Simulation() && (iMesh == MESH_0)) {
@@ -612,10 +615,13 @@ void CIntegration::SetDualTime_Solver(CGeometry *geometry, CSolver *solver, CCon
     /*--- Find marker and give it's plunge and pitch coordinate to the master node ---*/
     
     for (iMarker_Monitoring = 0; iMarker_Monitoring < config->GetnMarker_Monitoring(); iMarker_Monitoring++) {
+
+      Monitoring_Tag = config->GetMarker_Monitoring(iMarker_Monitoring);
       
       for (iMarker = 0; iMarker < config->GetnMarker_All(); iMarker++) {
         
         Monitoring_Tag = config->GetMarker_Monitoring_TagBound(iMarker_Monitoring);
+
         Marker_Tag = config->GetMarker_All_TagBound(iMarker);
         if (Marker_Tag == Monitoring_Tag) { owner = 1; break;
         } else {

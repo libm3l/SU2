@@ -403,6 +403,7 @@ void CConfig::SetPointersNull(void) {
 
   /*--- Moving mesh pointers ---*/
 
+
   Kind_GridMovement	  = NULL;
   Motion_Origin_X     = NULL;    Motion_Origin_Y     = NULL;    Motion_Origin_Z	    = NULL;
   Translation_Rate_X  = NULL;    Translation_Rate_Y  = NULL;    Translation_Rate_Z  = NULL;
@@ -413,7 +414,8 @@ void CConfig::SetPointersNull(void) {
   Plunging_Omega_X    = NULL;    Plunging_Omega_Y    = NULL;    Plunging_Omega_Z    = NULL;
   Plunging_Ampl_X     = NULL;    Plunging_Ampl_Y     = NULL;    Plunging_Ampl_Z     = NULL;
   RefOriginMoment_X   = NULL;    RefOriginMoment_Y   = NULL;    RefOriginMoment_Z   = NULL;
-  MoveMotion_Origin   = NULL;
+  MoveMotion_Origin   = NULL;    
+  Angle_Roll          = NULL;    Angle_Pitch         = NULL;    Angle_Yaw           = NULL;
   Periodic_Translate  = NULL;    Periodic_Rotation 	 = NULL;    Periodic_Center	    = NULL;
   Periodic_Translation= NULL;    Periodic_RotAngles	 = NULL;    Periodic_RotCenter  = NULL;
 
@@ -1284,6 +1286,10 @@ void CConfig::SetConfig_Options(unsigned short val_iZone, unsigned short val_nZo
   addDoubleListOption("MOTION_ORIGIN_Y", nMotion_Origin_Y, Motion_Origin_Y);
   /* DESCRIPTION: Coordinates of the rigid motion origin */
   addDoubleListOption("MOTION_ORIGIN_Z", nMotion_Origin_Z, Motion_Origin_Z);
+    /* DESCRIPTION: Angles of the rigid motion origin */
+  addDoubleListOption("ANGLE_YAW", nAngle_Yaw, Angle_Yaw);
+  addDoubleListOption("ANGLE_ROLL", nAngle_Roll, Angle_Roll);
+  addDoubleListOption("ANGLE_PITCH", nAngle_Pitch, Angle_Pitch);
   /* DESCRIPTION: Translational velocity vector (m/s) in the x, y, & z directions (RIGID_MOTION only) */
   addDoubleListOption("TRANSLATION_RATE_X", nTranslation_Rate_X, Translation_Rate_X);
   /* DESCRIPTION: Translational velocity vector (m/s) in the x, y, & z directions (RIGID_MOTION only) */
@@ -2210,6 +2216,7 @@ void CConfig::SetPostprocessing(unsigned short val_software, unsigned short val_
    do not depend on surface specification). ---*/
   
   if (Grid_Movement &&
+      (Kind_GridMovement[ZONE_0] != EXTERNAL) &&
       (Kind_GridMovement[ZONE_0] != RIGID_MOTION) &&
       (Kind_GridMovement[ZONE_0] != ROTATING_FRAME) &&
       (Kind_GridMovement[ZONE_0] != MOVING_HTP) &&
@@ -2269,6 +2276,39 @@ void CConfig::SetPostprocessing(unsigned short val_software, unsigned short val_
   } else {
     if (Grid_Movement && (nMotion_Origin_Z != nGridMovement)) {
       cout << "Length of MOTION_ORIGIN_Z must match GRID_MOVEMENT_KIND!!" << endl;
+      exit(EXIT_FAILURE);
+    }
+  }
+  
+    if (Angle_Yaw == NULL) {
+    Angle_Yaw = new su2double[nMoving];
+    for (iZone = 0; iZone < nMoving; iZone++ )
+      Angle_Yaw[iZone] = 0.0;
+  } else {
+    if (Grid_Movement && (nAngle_Yaw != nGridMovement)) {
+      cout << "Length of nAngle_Yaw  must match GRID_MOVEMENT_KIND!!" << endl;
+      exit(EXIT_FAILURE);
+    }
+  }
+  
+  if (Angle_Pitch == NULL) {
+    Angle_Pitch = new su2double[nMoving];
+    for (iZone = 0; iZone < nMoving; iZone++ )
+      Angle_Pitch[iZone] = 0.0;
+  } else {
+    if (Grid_Movement && (nAngle_Pitch != nGridMovement)) {
+      cout << "Length of nAngle_Pitch must match GRID_MOVEMENT_KIND!!" << endl;
+      exit(EXIT_FAILURE);
+    }
+  }
+  
+  if (Angle_Roll == NULL) {
+    Angle_Roll = new su2double[nMoving];
+    for (iZone = 0; iZone < nMoving; iZone++ )
+      Angle_Roll[iZone] = 0.0;
+  } else {
+    if (Grid_Movement && (nAngle_Roll != nGridMovement)) {
+      cout << "Length of nAngle_Roll must match GRID_MOVEMENT_KIND!!" << endl;
       exit(EXIT_FAILURE);
     }
   }

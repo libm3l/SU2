@@ -1,3 +1,4 @@
+
 /*!
  * \file grid_movement_structure.hpp
  * \brief Headers of the main subroutines for doing the numerical grid 
@@ -49,6 +50,8 @@
 #include "matrix_structure.hpp"
 #include "vector_structure.hpp"
 #include "linear_solvers_structure.hpp"
+
+#include "../../SU2_CFD/include/tmpheader.h"
 
 using namespace std;
 
@@ -996,6 +999,20 @@ public:
    * \param[in] config - Definition of the particular problem.
    * \param[in] UpdateGeo - Update geometry.
    */
+  
+  	void D6dof_motion(CGeometry *geometry, CConfig *config, unsigned short iZone, unsigned long iter, d6dof_t *motion_data, 
+			  d6dof_t *motion_data_old, int status_run);
+	
+  /*!
+	 * \brief Unsteady pitching grid movement using rigid mesh motion.
+	 * \param[in] geometry - Geometrical definition of the problem.
+	 * \param[in] config - Definition of the particular problem.
+   * \param[in] iZone - Zone number in the mesh.
+   * \param[in] motion_data - angles, displacement and rotation center from current iteration.
+      * \param[in] motion_data - angles, displacement and rotation center from previous iteration.
+  * \param[in] status_run - if 0 no previous data exist, if 1 previous data exist.
+ */
+  
   void SetVolume_Scaling(CGeometry *geometry, CConfig *config, bool UpdateGeo);
   
   /*!
