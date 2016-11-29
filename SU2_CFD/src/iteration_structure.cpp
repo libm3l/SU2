@@ -33,6 +33,11 @@
 
 #include "../include/iteration_structure.hpp"
 
+#include "../include/ext_man_header.hpp"
+
+
+int communicate(CConfig *, CSolver ****, d6dof_t *, int, conn_t *);
+
 CIteration::CIteration(CConfig *config) { }
 CIteration::~CIteration(void) { }
 
@@ -46,13 +51,25 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
 				  unsigned long IntIter,
 				  unsigned long ExtIter)   {
 
+  
+
   unsigned short iDim, iMGlevel, nMGlevels = config_container[val_iZone]->GetnMGLevels();
   unsigned short Kind_Grid_Movement = config_container[val_iZone]->GetKind_GridMovement(val_iZone);
   unsigned long nIterMesh;
   unsigned long iPoint;
+
+  d6dof_t d6dofdata, d6dofdata_old, *p_6DOFdata, *p_6DOFdata_old;
+  conn_t conn, *pconn;
+  struct timespec now, tmstart;
+  double seconds;
+
   bool stat_mesh = true;
   bool adjoint = config_container[val_iZone]->GetContinuous_Adjoint();
   bool harmonic_balance = (config_container[val_iZone]->GetUnsteady_Simulation() == HARMONIC_BALANCE);
+
+  p_6DOFdata = &d6dofdata;
+  p_6DOFdata_old = &d6dofdata_old;
+  pconn = &conn;
 
   /*--- For a harmonic balance case, set "iteration number" to the zone number,
    so that the meshes are positioned correctly for each instance. ---*/
@@ -233,7 +250,78 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
 
       break;
 
-    case EXTERNAL: case EXTERNAL_ROTATION:
+    case EXTERNAL: 
+  /*
+  * motion prescribed by external solver, get the previous iteration 
+  * rotational angles, displacement and rotation center
+  */
+      p_6DOFdata_old->angles[0] = config_container[val_iZone]->GetYaw(val_iZone);
+      p_6DOFdata_old->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
+      p_6DOFdata_old->angles[2] = config_container[val_iZone]->GetRoll(val_iZone);
+      
+      p_6DOFdata_old->rotcenter[0] = config_container[val_iZone]->GetMotion_Origin_X(val_iZone);
+      p_6DOFdata_old->rotcenter[1] = config_container[val_iZone]->GetMotion_Origin_Y(val_iZone);
+      p_6DOFdata_old->rotcenter[2] = config_container[val_iZone]->GetMotion_Origin_Z(val_iZone);
+
+      if (rank == MASTER_NODE){
+ /*
+  * MASTER node communicate with external solver
+  */
+         cout << endl << " Sending data to external process." << endl;
+         clock_gettime(CLOCK_REALTIME, &tmstart);
+
+          if( communicate(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn) != 0)
+              Error("Communicate()");  
+      
+	  clock_gettime(CLOCK_REALTIME, &now);
+	  seconds = (double)((now.tv_sec+now.tv_nsec*1e-9) - (double)(tmstart.tv_sec+tmstart.tv_nsec*1e-9));
+	  printf("wall time %fs\n", seconds);
+	  cout << endl << " Data from external process received" << endl;
+      }
+
+/*
+ *recevied angles have to redistrbuted to all partitions
+ */   
+#ifdef HAVE_MPI
+      SU2_MPI::Bcast(p_6DOFdata->angles, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
+      SU2_MPI::Bcast(p_6DOFdata->rotcenter, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
+      SU2_MPI::Bcast(p_6DOFdata->transvec, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
+#endif
+
+/*
+ * Save previous data, they are needed to transform the mesh back to its original position
+ */
+      config_container[val_iZone]->SetMotion_Origin_X(val_iZone,p_6DOFdata->rotcenter[0]);
+      config_container[val_iZone]->SetMotion_Origin_Y(val_iZone,p_6DOFdata->rotcenter[1]);
+      config_container[val_iZone]->SetMotion_Origin_Z(val_iZone,p_6DOFdata->rotcenter[2]);
+      
+      config_container[val_iZone]->SetYaw(val_iZone,p_6DOFdata->angles[0]);
+      config_container[val_iZone]->SetPitch(val_iZone,p_6DOFdata->angles[1]);
+      config_container[val_iZone]->SetRoll(val_iZone,p_6DOFdata->angles[2]);
+      
+      cout << endl << " Moving mesh" << endl;
+      
+      if(ExtIter == 0)
+/*
+ * if the very first iteration, do not transform mesh back, it is in original position
+ */
+         grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
+                                    config_container[val_iZone], val_iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,0);
+       else
+         grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
+                                    config_container[val_iZone], val_iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,1);
+	 
+	 
+      geometry_container[val_iZone][MESH_0]->SetGridVelocity(config_container[val_iZone], ExtIter);
+      
+      /*--- Update the multigrid structure after moving the finest grid,
+       including computing the grid velocities on the coarser levels. ---*/
+      
+      grid_movement[val_iZone]->UpdateMultiGrid(geometry_container[val_iZone], config_container[val_iZone]);
+    break;
+
+
+    case EXTERNAL_ROTATION:
 
       /*--- Apply rigid rotation to entire grid first, if necessary ---*/
 
@@ -2438,4 +2526,237 @@ void FEM_StructuralIteration(COutput *output, CIntegration ***integration_contai
 	}
 
 
+}
+
+
+int   communicate(CConfig *config, CSolver ****solver_container, d6dof_t *angle, int iter, conn_t *conn)
+{
+/*
+ * function is a communication routine through 
+ * data link called "CFD2SIM"
+ * 
+ * the routine sends forces/moments and gets back rotation angles and displacement
+ * 
+ * created: 		Adam Jirasek
+ * date:		2014-03-05
+ * 
+ * input data:
+ * 	Forces_moments  	- vectors of double (10)
+ * 	ttime      	- time
+ * 	host_len	- length of host name
+ * 	host		- host name
+ * 	port		- port number
+ * 
+ * output data:
+ * 	phi, theta, psi - angles
+ *      rotation center
+ *      translation vector
+ */
+	node_t *Gnode=NULL, *TmpNode = NULL, *FoundNode = NULL;
+	size_t dim[1], tot_dim;
+
+	char *hostname="localhost";
+	int sockfd, portno;
+
+	char *name ="CFD2SIM";
+	char *name1="SIM2CFD";
+	
+//	char name_i[80], name_o[80], channel_name[80];
+
+	double *tmpfloat, Lift, Drag, Side, Ceff, Cmx, Cmy, Cmz, Cfx, Cfy, Cfz;
+	double deltaT, time;
+	client_fce_struct_t InpPar, *PInpPar;
+	opts_t *Popts_1, opts, opts_1, *Popts;
+	find_t *SFounds;
+	
+	portno = 31000;
+/*
+ * get forces/moments
+ */
+        Lift = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CL();
+        Drag = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CD();
+        Side = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CSF();
+        Ceff = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CEff();
+        Cmx =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CMx();
+        Cmy =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CMy();
+        Cmz =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CMz();
+        Cfx =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CFx();
+        Cfy =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CFy();
+        Cfz =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CFz();
+/*
+ * set connection parameters (data link etc)
+ */
+	PInpPar = &InpPar;
+	PInpPar->channel_name = name;  /* name of channel */
+	PInpPar->SR_MODE = 'S';            /* process is sending data */
+	if ( (PInpPar->mode = get_exchange_channel_mode('D', 'N')) == -1)
+		Error("socket_SU2_2_Simul: wrong client mode");
+
+	Popts   = &opts;
+	Popts_1 = &opts_1;
+	m3l_set_Send_receive_tcpipsocket(&Popts_1);
+	m3l_set_Find(&Popts);
+/*
+ * create data structure which will be sent
+*/
+	if(  (Gnode = m3l_Mklist("CFD_2_SIM", "DIR", 0, NULL, (node_t **)NULL, (const char *)NULL, (const char *)NULL, (char *)NULL)) == 0)
+		Perror("socket_SU2_2_Simul: m3l_Mklist");
+	
+	dim[0] =10;
+/*
+ * store global forces moments
+ */
+	if(  (TmpNode = m3l_Mklist("ForcesMoments", "D", 1, dim, &Gnode, "/CFD_2_SIM", "./", (char *)NULL)) == 0)
+		Error("socket_SU2_2_Simul: m3l_Mklist");
+	TmpNode->data.df[0]= Lift;
+	TmpNode->data.df[1]= Drag;
+	TmpNode->data.df[2]= Side;
+	TmpNode->data.df[3]= Ceff;
+	TmpNode->data.df[4]= Cmx;
+	TmpNode->data.df[5]= Cmy;
+	TmpNode->data.df[6]= Cmz;
+	TmpNode->data.df[7]= Cfx;
+	TmpNode->data.df[8]= Cfy;
+	TmpNode->data.df[9]= Cfz;
+	
+	printf("%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf \n", Lift, Drag, Side, Ceff, Cmx, Cmy, Cmz, Cfx, Cfy, Cfz);
+/*
+ * add time
+ */
+        deltaT = config->GetDelta_UnstTimeND();
+	time = static_cast<su2double>(iter)*deltaT;
+	dim[0] = 1;
+	if(  (TmpNode = m3l_Mklist("Time", "D", 1, dim, &Gnode, "/CFD_2_SIM", "./", (char *)NULL)) == 0)
+		Error("socket_SU2_2_Simul: m3l_Mklist");
+	TmpNode->data.df[0] = time;
+/*
+ * open socket
+ */
+	if( (sockfd = open_connection_to_server(hostname, portno, PInpPar, Popts_1)) < 1)
+		Error("socket_SU2_2_Simul: Error when opening socket");
+/*
+ * send data 
+ */
+	if ( client_sender(Gnode, sockfd, PInpPar, (opts_t *)NULL, (opts_t *)NULL) !=1 )
+		Error("socket_SU2_2_Simul: client_sender()");
+
+	if( close(sockfd) == -1)
+		Perror("socket_SU2_2_Simul: close");
+/*
+ * free borrowed memory
+ */
+	if(m3l_Umount(&Gnode) != 1)
+		Perror("socket_SU2_2_Simul: m3l_Umount");
+/*
+ * receive data 
+ */
+	PInpPar = &InpPar;
+	PInpPar->channel_name = name1;  /* name of channel for receiving data */
+	PInpPar->SR_MODE = 'R';             /* process is receiving data */
+	if ( (PInpPar->mode = get_exchange_channel_mode('D', 'N')) == -1)
+		Error("socket_SU2_2_Simul: wrong client mode");
+
+	Popts   = &opts;
+	Popts_1 = &opts_1;
+	m3l_set_Send_receive_tcpipsocket(&Popts_1);
+	m3l_set_Find(&Popts);
+
+	if( (sockfd = open_connection_to_server(hostname, portno, PInpPar, Popts_1)) < 1)
+		Error("client_sender: Error when opening socket");
+
+	if ( (Gnode = client_receiver(sockfd, PInpPar, (opts_t *)NULL, (opts_t *)NULL)) == NULL)
+		Error("socket_SU2_2_Simul: client_receiver()");
+/*
+ * close socket 
+ */
+	if( close(sockfd) == -1)
+		Perror("socket_SU2_2_Simul: close");
+/*
+ * find Angles - rotation matrix and copy the values to Edge allocated memory
+ */
+	if( (SFounds = m3l_Locate(Gnode, "/SIM_2_CFD/Angles", "/*/*",  (char *)NULL)) != NULL){
+
+		if( m3l_get_Found_number(SFounds) != 1)
+			Error("socket_SU2_2_Simul: More then one Angles data set found");
+/* 
+ * pointer to list of found nodes
+ */
+		if( (FoundNode = m3l_get_Found_node(SFounds, 0)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find 1st data pointer");
+		if( (tot_dim = m3l_get_List_totdim(FoundNode)) != 3)
+			Error("socket_SU2_2_Simul: Wrong dimensions of Angles array");
+		if( (tmpfloat = (double *)m3l_get_data_pointer(FoundNode)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find Angles data pointer");
+			angle->angles[0] = tmpfloat[0];
+			angle->angles[1] = tmpfloat[1];
+			angle->angles[2] = tmpfloat[2];
+/* 
+ * free memory allocated in m3l_Locate
+ */
+		m3l_DestroyFound(&SFounds);
+	}
+	else
+	{
+		Error("socket_SU2_2_Simul: Angles not found\n");
+	}
+/*
+ * find center of rotation
+ */
+	if( (SFounds = m3l_Locate(Gnode, "/SIM_2_CFD/RotCenter", "/*/*",  (char *)NULL)) != NULL){
+
+		if( m3l_get_Found_number(SFounds) != 1)
+			Error("socket_SU2_2_Simul: More then one RotCenter data set found");
+/* 
+ * pointer to list of found nodes
+ */
+		if( (FoundNode = m3l_get_Found_node(SFounds, 0)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find 1st data pointer");
+		if( (tmpfloat = (double *)m3l_get_data_pointer(FoundNode)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find RotCenter data pointer");
+		
+		angle->rotcenter[0] = tmpfloat[0];
+		angle->rotcenter[1] = tmpfloat[1];
+		angle->rotcenter[2] = tmpfloat[2];
+/* 
+ * free memory allocated in m3l_Locate
+ */
+		m3l_DestroyFound(&SFounds);
+	}
+	else
+	{
+		Error("socket_SU2_2_Simul: RotCenter not found\n");
+	}
+/*
+ * find center of translation
+ */
+	if( (SFounds = m3l_Locate(Gnode, "/SIM_2_CFD/TransVec", "/*/*",  (char *)NULL)) != NULL){
+
+		if( m3l_get_Found_number(SFounds) != 1)
+			Error("socket_SU2_2_Simul: More then one TransVec data set found");
+/* 
+ * pointer to list of found nodes
+ */
+		if( (FoundNode = m3l_get_Found_node(SFounds, 0)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find 1st data pointer");
+		if( (tmpfloat = (double *)m3l_get_data_pointer(FoundNode)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find TransVec data pointer");
+
+		angle->transvec[0] = tmpfloat[0];
+		angle->transvec[1] = tmpfloat[1];
+		angle->transvec[2] = tmpfloat[2];
+/* 
+ * free memory allocated in m3l_Locate
+ */
+		m3l_DestroyFound(&SFounds);
+	}
+	else
+	{
+		Error("socket_SU2_2_Simul: TransVec not found\n");
+	}
+/*
+ * free borrowed memory
+ */
+	if(m3l_Umount(&Gnode) != 1)
+		Perror("socket_SU2_2_Simul: m3l_Umount");
+	return 0;
 }
