@@ -32,7 +32,7 @@
  */
 
 #include "../include/grid_movement_structure.hpp"
-#include "../../SU2_CFD/include/tmpheader.h"
+#include "../../SU2_CFD/include/ext_man_header.hpp"
 #include <list>
 
 using namespace std;
@@ -2541,7 +2541,7 @@ void CVolumetricMovement::Rigid_Translation(CGeometry *geometry, CConfig *config
 
 
 void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
-                                         unsigned short iZone, unsigned long iter, d6dof_t *motion_data, d6dof_t *motion_data_old, int status_run) {
+           unsigned short iZone, unsigned long iter, d6dof_t *motion_data, d6dof_t *motion_data_old, int status_run) {
   
   int rank = MASTER_NODE;
 #ifdef HAVE_MPI
@@ -2549,16 +2549,14 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 #endif
   
 	/*--- Local variables ---*/
-	unsigned short iDim, nDim; 
+	unsigned short nDim; 
 	unsigned long iPoint;
 	su2double r[3] = {0.0,0.0,0.0}, rotCoord[3] = {0.0,0.0,0.0}, *Coord;
 	su2double rotMatrix[3][3] = {{0.0,0.0,0.0}, {0.0,0.0,0.0}, {0.0,0.0,0.0}};
 	su2double rotMatrixo[3][3] = {{0.0,0.0,0.0}, {0.0,0.0,0.0}, {0.0,0.0,0.0}};
 	su2double dtheta, dphi, dpsi, cosTheta, sinTheta, cosThetao, sinThetao,sinPsio,cosPsio;
-	su2double cosPhi, sinPhi,cosPhio, sinPhio, cosPsi, sinPsi,x,xn,y,yn,z,zn,xno,yno;
+	su2double cosPhi, sinPhi,cosPhio, sinPhio, cosPsi, sinPsi,x,xn,y,z,yn,xno,yno;
 	su2double rotXold, rotYold, rotZold,dthetao, dphio, dpsio;
-	bool time_spectral = (config->GetUnsteady_Simulation() == TIME_SPECTRAL);
-	bool adjoint = config->GetAdjoint();
 
 	/*--- Problem dimension  ---*/
 	nDim = geometry->GetnDim();
@@ -2569,7 +2567,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 // 	  iZone = ZONE_0;
   
   /*--- Compute delta change in the angle about the x, y, & z axes. ---*/
-//    cout << "Old ngles are: " << motion_data_old->angles[0] << ", " << motion_data_old->angles[1]<< ", " << motion_data_old->angles[2]<< endl;
+//    cout << "Old angles are: " << motion_data_old->angles[0] << ", " << motion_data_old->angles[1]<< ", " << motion_data_old->angles[2]<< endl;
 //    cout << "Angles are: " << motion_data->angles[0] << ", " << motion_data->angles[1]<< ", " << motion_data->angles[2]<< endl;
 //    cout << "Centr of rotation is: " << motion_data->rotcenter[0] << ", " << motion_data->rotcenter[1]<< ", " << motion_data->rotcenter[2]<< endl;
 
@@ -2585,7 +2583,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
   dpsi   = motion_data->angles[0]*3.1415926/180.;  // yaw  
 
   if(nDim == 3){
-     dthetao   =- motion_data_old->angles[2]*3.1415926/180.;  // pitch
+     dthetao    = -motion_data_old->angles[2]*3.1415926/180.;  // pitch
      dphio      = -motion_data_old->angles[1]*3.1415926/180.;  // roll
      dpsio      = -motion_data_old->angles[0]*3.1415926/180.;  // yaw
      
@@ -2598,6 +2596,10 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
      dpsio   = motion_data_old->angles[0]*3.1415926/180.;  // pitch
      rotXold = motion_data_old->rotcenter[0];
      rotYold = motion_data_old->rotcenter[1];
+     
+     dphio = 0.;
+     dpsio = 0.;
+
   }
   
 	/*--- Store angles separately for clarity. Compute sines/cosines. ---*/
@@ -2674,8 +2676,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 			+ rotMatrix[2][1]*r[1] 
 			+ rotMatrix[2][2]*r[2];
     
-    /*--- Store new node location & grid velocity. Add center. 
-     Do not store the grid velocity if this is an adjoint calculation.---*/
+    /*--- Store new node location & grid velocity. Add center---*/
     
 			geometry->node[iPoint]->SetCoord(0, rotCoord[0] + motion_data->rotcenter[0]);      
 			geometry->node[iPoint]->SetCoord(1, rotCoord[1] + motion_data->rotcenter[1]);      

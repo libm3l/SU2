@@ -193,11 +193,11 @@ if (test $enablecgns = yes); then
   su2_externals_INCLUDES="-DHAVE_CGNS $CGNS_INCLUDE $su2_externals_INCLUDES"
   su2_externals_LIBS="$CGNS_LIB $su2_externals_LIBS"
 
-su2_externals_INCLUDES="$su2_externals_INCLUDES -I/home/jiraseka/Cprogs/libm3l/Source/data_util -I/home/jiraseka/Cprogs/libm3l/Source/data_util -lrt"
+#su2_externals_INCLUDES="$su2_externals_INCLUDES -I/home/jiraseka/Cprogs/libm3l/Source/data_util -I/home/jiraseka/Cprogs/libm3l/Source/data_util -lrt"
 #su2_externals_LIBS="$su2_externals_LIBS  /home/jka/Cprograms/Sources/lsipdx/Source/libm3lsipdx.a -lpthread "
 
 #su2_externals_LIBS="$su2_externals_LIBS /extra2/JKA/Cprograms/lsipdx/Source/libm3llsipdx.a"
-su2_externals_LIBS="$su2_externals_LIBS -L/home/jiraseka/Cprogs/lsipdx/Source -lm3llsipdx -Wl,-rpath=/home/jiraseka/Cprogs/lsipdx/Source"
+#su2_externals_LIBS="$su2_externals_LIBS -L/home/jiraseka/Cprogs/lsipdx/Source -lm3llsipdx -Wl,-rpath=/home/jiraseka/Cprogs/lsipdx/Source"
 
 else
   su2_externals_INCLUDES="$su2_externals_INCLUDES"

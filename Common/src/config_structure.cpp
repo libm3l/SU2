@@ -1333,7 +1333,7 @@ void CConfig::SetConfig_Options(unsigned short val_iZone, unsigned short val_nZo
   /* DESCRIPTION: Plunging amplitude (m) in x, y, & z directions (RIGID_MOTION only) */
   addDoubleListOption("PLUNGING_AMPL_Z", nPlunging_Ampl_Z, Plunging_Ampl_Z);
   /* DESCRIPTION: Value to move motion origins (1 or 0) */
-  addUShortListOption("MOVE_MOTION_ORIGIN", nMoveMotion_Origin, MoveMotion_Origin);
+  addDoubleListOption("MOVE_MOTION_ORIGIN", nMoveMotion_Origin, MoveMotion_Origin);
   /* DESCRIPTION:  */
   addStringOption("MOTION_FILENAME", Motion_Filename, string("mesh_motion.dat"));
 
@@ -2314,7 +2314,7 @@ void CConfig::SetPostprocessing(unsigned short val_software, unsigned short val_
   }
   
   if (MoveMotion_Origin == NULL) {
-    MoveMotion_Origin = new unsigned short[nMoving];
+    MoveMotion_Origin = new su2double[nMoving];
     for (iZone = 0; iZone < nMoving; iZone++ )
       MoveMotion_Origin[iZone] = 0;
   } else {

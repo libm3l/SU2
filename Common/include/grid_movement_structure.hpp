@@ -51,7 +51,7 @@
 #include "vector_structure.hpp"
 #include "linear_solvers_structure.hpp"
 
-#include "../../SU2_CFD/include/tmpheader.h"
+#include "../../SU2_CFD/include/ext_man_header.hpp"
 
 using namespace std;
 

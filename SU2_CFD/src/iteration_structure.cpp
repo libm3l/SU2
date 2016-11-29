@@ -33,9 +33,7 @@
 
 #include "../include/iteration_structure.hpp"
 
-#include "../include/tmpheader.h"
-#include "libm3l.h"
-#include "lsipdx.h"
+#include "../include/ext_man_header.hpp"
 
 
 int communicate(CConfig *, CSolver ****, d6dof_t *, int, conn_t *);
@@ -53,13 +51,25 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
 				  unsigned long IntIter,
 				  unsigned long ExtIter)   {
 
+  
+
   unsigned short iDim, iMGlevel, nMGlevels = config_container[val_iZone]->GetnMGLevels();
   unsigned short Kind_Grid_Movement = config_container[val_iZone]->GetKind_GridMovement(val_iZone);
   unsigned long nIterMesh;
   unsigned long iPoint;
+
+  d6dof_t d6dofdata, d6dofdata_old, *p_6DOFdata, *p_6DOFdata_old;
+  conn_t conn, *pconn;
+  struct timespec now, tmstart;
+  double seconds;
+
   bool stat_mesh = true;
   bool adjoint = config_container[val_iZone]->GetContinuous_Adjoint();
   bool harmonic_balance = (config_container[val_iZone]->GetUnsteady_Simulation() == HARMONIC_BALANCE);
+
+  p_6DOFdata = &d6dofdata;
+  p_6DOFdata_old = &d6dofdata_old;
+  pconn = &conn;
 
   /*--- For a harmonic balance case, set "iteration number" to the zone number,
    so that the meshes are positioned correctly for each instance. ---*/
@@ -245,13 +255,13 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
   * motion prescribed by external solver, get the previous iteration 
   * rotational angles, displacement and rotation center
   */
-      p_6DOFdata_old->angles[0] = config_container->GetYaw(iZone);
-      p_6DOFdata_old->angles[1] = config_container->GetPitch(iZone);
-      p_6DOFdata_old->angles[2] = config_container->GetRoll(iZone);
+      p_6DOFdata_old->angles[0] = config_container[val_iZone]->GetYaw(val_iZone);
+      p_6DOFdata_old->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
+      p_6DOFdata_old->angles[2] = config_container[val_iZone]->GetRoll(val_iZone);
       
-      p_6DOFdata_old->rotcenter[0] = config_container->GetMotion_Origin_X(iZone);
-      p_6DOFdata_old->rotcenter[1] = config_container->GetMotion_Origin_Y(iZone);
-      p_6DOFdata_old->rotcenter[2] = config_container->GetMotion_Origin_Z(iZone);
+      p_6DOFdata_old->rotcenter[0] = config_container[val_iZone]->GetMotion_Origin_X(val_iZone);
+      p_6DOFdata_old->rotcenter[1] = config_container[val_iZone]->GetMotion_Origin_Y(val_iZone);
+      p_6DOFdata_old->rotcenter[2] = config_container[val_iZone]->GetMotion_Origin_Z(val_iZone);
 
       if (rank == MASTER_NODE){
  /*
@@ -260,7 +270,7 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
          cout << endl << " Sending data to external process." << endl;
          clock_gettime(CLOCK_REALTIME, &tmstart);
 
-          if( communicate(config_container,&solver_container, p_6DOFdata, ExtIter, pconn) != 0)
+          if( communicate(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn) != 0)
               Error("Communicate()");  
       
 	  clock_gettime(CLOCK_REALTIME, &now);
@@ -281,13 +291,13 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
 /*
  * Save previous data, they are needed to transform the mesh back to its original position
  */
-      config_container->SetMotion_Origin_X(iZone,p_6DOFdata->rotcenter[0]);
-      config_container->SetMotion_Origin_Y(iZone,p_6DOFdata->rotcenter[1]);
-      config_container->SetMotion_Origin_Z(iZone,p_6DOFdata->rotcenter[2]);
+      config_container[val_iZone]->SetMotion_Origin_X(val_iZone,p_6DOFdata->rotcenter[0]);
+      config_container[val_iZone]->SetMotion_Origin_Y(val_iZone,p_6DOFdata->rotcenter[1]);
+      config_container[val_iZone]->SetMotion_Origin_Z(val_iZone,p_6DOFdata->rotcenter[2]);
       
-      config_container->SetYaw(iZone,p_6DOFdata->angles[0]);
-      config_container->SetPitch(iZone,p_6DOFdata->angles[1]);
-      config_container->SetRoll(iZone,p_6DOFdata->angles[2]);
+      config_container[val_iZone]->SetYaw(val_iZone,p_6DOFdata->angles[0]);
+      config_container[val_iZone]->SetPitch(val_iZone,p_6DOFdata->angles[1]);
+      config_container[val_iZone]->SetRoll(val_iZone,p_6DOFdata->angles[2]);
       
       cout << endl << " Moving mesh" << endl;
       
@@ -295,19 +305,19 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
 /*
  * if the very first iteration, do not transform mesh back, it is in original position
  */
-         grid_movement->D6dof_motion(geometry_container[MESH_0],
-                                    config_container, iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,0);
+         grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
+                                    config_container[val_iZone], val_iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,0);
        else
-         grid_movement->D6dof_motion(geometry_container[MESH_0],
-                                    config_container, iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,1);
+         grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
+                                    config_container[val_iZone], val_iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,1);
 	 
 	 
-      geometry_container[MESH_0]->SetGridVelocity(config_container, ExtIter);
+      geometry_container[val_iZone][MESH_0]->SetGridVelocity(config_container[val_iZone], ExtIter);
       
       /*--- Update the multigrid structure after moving the finest grid,
        including computing the grid velocities on the coarser levels. ---*/
       
-      grid_movement->UpdateMultiGrid(geometry_container, config_container);    
+      grid_movement[val_iZone]->UpdateMultiGrid(geometry_container[val_iZone], config_container[val_iZone]);
     break;
 
 
@@ -2525,7 +2535,7 @@ int   communicate(CConfig *config, CSolver ****solver_container, d6dof_t *angle,
  * function is a communication routine through 
  * data link called "CFD2SIM"
  * 
- * on return it receives displacements data set
+ * the routine sends forces/moments and gets back rotation angles and displacement
  * 
  * created: 		Adam Jirasek
  * date:		2014-03-05
@@ -2543,15 +2553,15 @@ int   communicate(CConfig *config, CSolver ****solver_container, d6dof_t *angle,
  *      translation vector
  */
 	node_t *Gnode=NULL, *TmpNode = NULL, *FoundNode = NULL;
-	size_t dim[1], i, tot_dim;
+	size_t dim[1], tot_dim;
 
-	char *hostname="localhost", channel_name[80];
+	char *hostname="localhost";
 	int sockfd, portno;
 
 	char *name ="CFD2SIM";
 	char *name1="SIM2CFD";
 	
-	char name_i[80], name_o[80];
+//	char name_i[80], name_o[80], channel_name[80];
 
 	double *tmpfloat, Lift, Drag, Side, Ceff, Cmx, Cmy, Cmz, Cfx, Cfy, Cfz;
 	double deltaT, time;
@@ -2563,16 +2573,16 @@ int   communicate(CConfig *config, CSolver ****solver_container, d6dof_t *angle,
 /*
  * get forces/moments
  */
-        Lift =       solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CLift();
-        Drag =    solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CDrag();
-        Side =    solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CSideForce();
-        Ceff =     solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CEff();
-        Cmx =    solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CMx();
-        Cmy =    solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CMy();
-        Cmz =    solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CMz();
-        Cfx =      solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CFx();
-        Cfy =      solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CFy();
-        Cfz =      solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CFz();
+        Lift = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CL();
+        Drag = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CD();
+        Side = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CSF();
+        Ceff = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CEff();
+        Cmx =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CMx();
+        Cmy =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CMy();
+        Cmz =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CMz();
+        Cfx =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CFx();
+        Cfy =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CFy();
+        Cfz =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CFz();
 /*
  * set connection parameters (data link etc)
  */
