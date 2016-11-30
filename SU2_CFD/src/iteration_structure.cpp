@@ -278,7 +278,6 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
 
 	  cout << endl << " Data from external process received, communication time: " << seconds << " seconds" << endl;
       }
-
 /*
  *recevied angles have to redistrbuted to all partitions
  */   
@@ -289,7 +288,8 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
 #endif
 
 /*
- * Save previous data, they are needed to transform the mesh back to its original position
+ * Save motion data, they are needed to transform the mesh back to its original position
+ * during next step transformation
  */
       config_container[val_iZone]->SetMotion_Origin_X(val_iZone,p_6DOFdata->rotcenter[0]);
       config_container[val_iZone]->SetMotion_Origin_Y(val_iZone,p_6DOFdata->rotcenter[1]);
@@ -299,7 +299,7 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
       config_container[val_iZone]->SetPitch(val_iZone,p_6DOFdata->angles[1]);
       config_container[val_iZone]->SetRoll(val_iZone,p_6DOFdata->angles[2]);
       
-      cout << endl << " Moving mesh" << endl;
+      if (rank == MASTER_NODE) cout << endl << " Moving mesh" << endl;
       
       if(ExtIter == 0)
 /*
