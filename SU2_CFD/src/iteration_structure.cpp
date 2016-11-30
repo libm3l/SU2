@@ -37,9 +37,15 @@
 
 
 int communicate(CConfig *, CSolver ****, d6dof_t *, int, conn_t *);
+void External_Comm(CGeometry ***,CSurfaceMovement **,CVolumetricMovement **,CFreeFormDefBox ***,
+                      		  CSolver ****, CConfig **,unsigned short , unsigned long ,
+				  unsigned long );
+
 
 CIteration::CIteration(CConfig *config) { }
 CIteration::~CIteration(void) { }
+
+
 
 void CIteration::SetGrid_Movement(CGeometry ***geometry_container, 
 				  CSurfaceMovement **surface_movement,
@@ -250,7 +256,9 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
 
       break;
 
-    case EXTERNAL: 
+    case EXTERNAL:
+
+      External_Comm(geometry_container, surface_movement, grid_movement, FFDBox, solver_container, config_container, val_iZone, IntIter, ExtIter); 
   /*
   * motion prescribed by external solver, get the previous iteration 
   * rotational angles, displacement and rotation center
@@ -307,7 +315,7 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
  */
          grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
                                     config_container[val_iZone], val_iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,0);
-       else
+      else
          grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
                                     config_container[val_iZone], val_iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,1);
 	 
@@ -633,6 +641,13 @@ void CMeanFlowIteration::Iterate(COutput *output,
     }
     
   }
+
+/*
+ * AJNOTE: Adam Jirasek: if any strong coupling to be done
+ *                     make a call here, at this position the 
+ *                     communication will be called every subiteration
+ * AJNOTE:
+ */
   
   /*--- Call Dynamic mesh update if AEROELASTIC motion was specified ---*/
   
@@ -1049,6 +1064,7 @@ void CWaveIteration::Iterate(COutput *output,
       integration_container[val_iZone][WAVE_SOL]->SingleGrid_Iteration(geometry_container, solver_container, numerics_container,
                                                                        config_container, RUNTIME_WAVE_SYS, IntIter, val_iZone);
       if (integration_container[val_iZone][WAVE_SOL]->GetConvergence()) break;
+
     }
     
   }
