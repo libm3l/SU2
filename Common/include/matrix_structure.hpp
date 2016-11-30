@@ -3,7 +3,7 @@
  * \brief Headers of the main subroutines for creating the sparse matrices-by-blocks.
  *        The subroutines and functions are in the <i>matrix_structure.cpp</i> file.
  * \author F. Palacios, A. Bueno, T. Economon
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  *
  * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -13,8 +13,10 @@
  *                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
  *                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
  *                 Prof. Rafael Palacios' group at Imperial College London.
+ *                 Prof. Edwin van der Weide's group at the University of Twente.
+ *                 Prof. Vincent Terrapon's group at the University of Liege.
  *
- * Copyright (C) 2012-2015 SU2, the open-source CFD code.
+ * Copyright (C) 2012-2016 SU2, the open-source CFD code.
  *
  * SU2 is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -33,7 +35,7 @@
 #pragma once
 
 #include "./mpi_structure.hpp"
-
+#include <limits>
 #include <iostream>
 #include <cmath>
 #include <cstdlib>
@@ -44,15 +46,18 @@
 
 using namespace std;
 
+const su2double eps = numeric_limits<su2double>::epsilon(); /*!< \brief machine epsilon */
+
+
 /*!
  * \class CSysMatrix
  * \brief Main class for defining sparse matrices-by-blocks
  with compressed row format.
  * \author A. Bueno, F. Palacios
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  */
 class CSysMatrix {
-protected:
+private:
 	unsigned long nPoint,   /*!< \brief Number of points in the grid. */
 	nPointDomain,           /*!< \brief Number of points in the grid. */
 	nVar,                   /*!< \brief Number of variables. */
@@ -242,7 +247,6 @@ public:
 	 * \return Solution of the linear system (overwritten on rhs).
 	 */
   void Gauss_Elimination(unsigned long block_i, su2double* rhs, bool transposed = false);
-
   
 	/*!
 	 * \brief Performs the Gauss Elimination algorithm to solve the linear subsystem of the (i, i) subblock and rhs.
@@ -329,6 +333,8 @@ public:
 	/*!
 	 * \brief Performs the product of a sparse matrix by a CSysVector.
 	 * \param[in] vec - CSysVector to be multiplied by the sparse matrix A.
+	 * \param[in] geometry - Geometrical definition of the problem.
+   * \param[in] config - Definition of the particular problem.
 	 * \param[out] prod - Result of the product.
 	 */
 	void MatrixVectorProduct(const CSysVector & vec, CSysVector & prod, CGeometry *geometry, CConfig *config);
@@ -336,6 +342,8 @@ public:
   /*!
    * \brief Performs the product of a sparse matrix by a CSysVector.
    * \param[in] vec - CSysVector to be multiplied by the sparse matrix A.
+   * \param[in] geometry - Geometrical definition of the problem.
+   * \param[in] config - Definition of the particular problem.
    * \param[out] prod - Result of the product.
    */
   void MatrixVectorProductTransposed(const CSysVector & vec, CSysVector & prod, CGeometry *geometry, CConfig *config);
@@ -390,6 +398,8 @@ public:
 	 * \brief Multiply CSysVector by the preconditioner
 	 * \param[in] vec - CSysVector to be multiplied by the preconditioner.
 	 * \param[out] prod - Result of the product A*vec.
+   * \param[in] geometry - Geometrical definition of the problem.
+   * \param[in] config - Definition of the particular problem.
 	 */
 	void ComputeJacobiPreconditioner(const CSysVector & vec, CSysVector & prod, CGeometry *geometry, CConfig *config);
   
@@ -400,7 +410,10 @@ public:
    * \param[in] mat_vec - object that defines matrix-vector product
    * \param[in] tol - tolerance with which to solve the system
    * \param[in] m - maximum size of the search subspace
+   * \param[in] residual
    * \param[in] monitoring - turn on priting residuals from solver to screen.
+   * \param[in] geometry - Geometrical definition of the problem.
+   * \param[in] config - Definition of the particular problem.
    * \param[out] x - CSysVector containing the result of the smoothing (x^k+1 = x^k + M^-1*(b - A*x^k).
    */
   unsigned long Jacobi_Smoother(const CSysVector & b, CSysVector & x, CMatrixVectorProduct & mat_vec, su2double tol, unsigned long m, su2double *residual, bool monitoring, CGeometry *geometry, CConfig *config);
@@ -415,6 +428,8 @@ public:
 	 * \brief Multiply CSysVector by the preconditioner
 	 * \param[in] vec - CSysVector to be multiplied by the preconditioner.
 	 * \param[out] prod - Result of the product A*vec.
+   * \param[in] geometry - Geometrical definition of the problem.
+   * \param[in] config - Definition of the particular problem.
 	 */
 	void ComputeILUPreconditioner(const CSysVector & vec, CSysVector & prod, CGeometry *geometry, CConfig *config);
   
@@ -425,7 +440,10 @@ public:
    * \param[in] mat_vec - object that defines matrix-vector product
    * \param[in] tol - tolerance with which to solve the system
    * \param[in] m - maximum size of the search subspace
+   * \param[in] residual
    * \param[in] monitoring - turn on priting residuals from solver to screen.
+   * \param[in] geometry - Geometrical definition of the problem.
+   * \param[in] config - Definition of the particular problem.
    * \param[out] x - CSysVector containing the result of the smoothing (x^k+1 = x^k + M^-1*(b - A*x^k).
    */
   unsigned long ILU0_Smoother(const CSysVector & b, CSysVector & x, CMatrixVectorProduct & mat_vec, su2double tol, unsigned long m, su2double *residual, bool monitoring, CGeometry *geometry, CConfig *config);
@@ -444,7 +462,10 @@ public:
    * \param[in] mat_vec - object that defines matrix-vector product
    * \param[in] tol - tolerance with which to solve the system
    * \param[in] m - maximum size of the search subspace
+   * \param[in] residual
    * \param[in] monitoring - turn on priting residuals from solver to screen.
+   * \param[in] geometry - Geometrical definition of the problem.
+   * \param[in] config - Definition of the particular problem.
    * \param[out] x - CSysVector containing the result of the smoothing (x^k+1 = x^k + M^-1*(b - A*x^k).
    */
   unsigned long LU_SGS_Smoother(const CSysVector & b, CSysVector & x, CMatrixVectorProduct & mat_vec, su2double tol, unsigned long m, su2double *residual, bool monitoring, CGeometry *geometry, CConfig *config);
@@ -488,6 +509,8 @@ public:
 	/*!
 	 * \brief constructor of the class
 	 * \param[in] matrix_ref - matrix reference that will be used to define the products
+	 * \param[in] geometry_ref -
+   * \param[in] config_ref -
 	 */
 	CSysMatrixVectorProduct(CSysMatrix & matrix_ref, CGeometry *geometry_ref, CConfig *config_ref);
   
@@ -519,6 +542,8 @@ public:
   /*!
    * \brief constructor of the class
    * \param[in] matrix_ref - matrix reference that will be used to define the products
+   * \param[in] geometry_ref -
+   * \param[in] config_ref -
    */
   CSysMatrixVectorProductTransposed(CSysMatrix & matrix_ref, CGeometry *geometry_ref, CConfig *config_ref);
 
@@ -550,6 +575,8 @@ public:
 	/*!
 	 * \brief constructor of the class
 	 * \param[in] matrix_ref - matrix reference that will be used to define the preconditioner
+	 * \param[in] geometry_ref -
+   * \param[in] config_ref -
 	 */
 	CJacobiPreconditioner(CSysMatrix & matrix_ref, CGeometry *geometry_ref, CConfig *config_ref);
   
@@ -581,6 +608,8 @@ public:
   /*!
    * \brief constructor of the class
    * \param[in] matrix_ref - matrix reference that will be used to define the preconditioner
+   * \param[in] geometry_ref -
+   * \param[in] config_ref -
    */
   CJacobiTransposedPreconditioner(CSysMatrix & matrix_ref, CGeometry *geometry_ref, CConfig *config_ref);
 
@@ -612,6 +641,8 @@ public:
 	/*!
 	 * \brief constructor of the class
 	 * \param[in] matrix_ref - matrix reference that will be used to define the preconditioner
+	 * \param[in] geometry_ref -
+   * \param[in] config_ref -
 	 */
 	CILUPreconditioner(CSysMatrix & matrix_ref, CGeometry *geometry_ref, CConfig *config_ref);
   
@@ -637,12 +668,14 @@ private:
 	CSysMatrix* sparse_matrix; /*!< \brief pointer to matrix that defines the preconditioner. */
   CGeometry* geometry; /*!< \brief pointer to matrix that defines the geometry. */
 	CConfig* config; /*!< \brief pointer to matrix that defines the config. */
-
+  
 public:
 	
 	/*!
 	 * \brief constructor of the class
 	 * \param[in] matrix_ref - matrix reference that will be used to define the preconditioner
+	 * \param[in] geometry_ref -
+   * \param[in] config_ref -
 	 */
 	CLU_SGSPreconditioner(CSysMatrix & matrix_ref, CGeometry *geometry_ref, CConfig *config_ref);
 	
@@ -674,6 +707,8 @@ public:
 	/*!
 	 * \brief constructor of the class
 	 * \param[in] matrix_ref - matrix reference that will be used to define the preconditioner
+	 * \param[in] geometry_ref -
+   * \param[in] config_ref -
 	 */
 	CLineletPreconditioner(CSysMatrix & matrix_ref, CGeometry *geometry_ref, CConfig *config_ref);
 	
@@ -689,6 +724,5 @@ public:
 	 */
 	void operator()(const CSysVector & u, CSysVector & v) const;
 };
-
 
 #include "matrix_structure.inl"

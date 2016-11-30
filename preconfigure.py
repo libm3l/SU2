@@ -1,11 +1,11 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 ## \file configure.py
 #  \brief An extended configuration script.
 #  \author T. Albring
-#  \version 4.0.1 "Cardinal"
+#  \version 4.3.0 "Cardinal"
 #
-# SU2 Lead Developers: Dr. Francisco Palacios (francisco.palacios@boeing.com).
+# SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
 #                      Dr. Thomas D. Economon (economon@stanford.edu).
 #
 # SU2 Developers: Prof. Juan J. Alonso's group at Stanford University.
@@ -13,8 +13,10 @@
 #                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
 #                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
 #                 Prof. Rafael Palacios' group at Imperial College London.
+#                 Prof. Edwin van der Weide's group at the University of Twente.
+#                 Prof. Vincent Terrapon's group at the University of Liege.
 #
-# Copyright (C) 2012-2015 SU2, the open-source CFD code.
+# Copyright (C) 2012-2016 SU2, the open-source CFD code.
 #
 # SU2 is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -69,6 +71,8 @@ def main():
     parser.add_option("--with-ad", action="store",  type = "string",  help="AD Tool, CODI/ADOLC", default="CODI", dest="adtool")
     parser.add_option("--enable-mpi", action="store_true",
                       help="Enable mpi support", dest="mpi_enabled", default=False)
+    parser.add_option("--enable-PY_WRAPPER", action="store_true",
+                      help="Enable Python wrapper compilation", dest="py_wrapper_enabled", default=False)
     parser.add_option("--disable-normal", action="store_true",
                       help="Disable normal mode support", dest="normal_mode", default=False)
     parser.add_option("-c" , "--check", action="store_true",
@@ -105,12 +109,11 @@ def main():
               'SU2_DIRECTDIFF' : adtool_dd ,
               'SU2_AD'    : adtool_da }
 
-
     # Create a dictionary from the arguments
     argument_dict = dict(zip(args[::2],args[1::2]))
 
     # Set the default installation path (if not set with --prefix)
-    argument_dict['--prefix'] = argument_dict.get('--prefix', check_output('pwd').rstrip())
+    argument_dict['--prefix'] = argument_dict.get('--prefix', os.getcwd().rstrip())
 
 
     if not options.check:
@@ -120,6 +123,7 @@ def main():
         configure(argument_dict,
                   conf_environ,
                   options.mpi_enabled,
+		  options.py_wrapper_enabled,
                   modes,
                   made_adolc,
                   made_codi)
@@ -278,7 +282,7 @@ def init_codi(argument_dict, modes, mpi_support = False, update = False):
     
     # This information of the modules is used if projects was not cloned using git
     # The sha tag must be maintained manually to point to the correct commit
-    sha_version_codi = '38dd2f9115f161d31b07acaf3dd5d47fcbbb12e2'
+    sha_version_codi = 'a78ba3f4fd0fc8c7fb1fd7edb663b86a96e99c2a'
     github_repo_codi = 'https://github.com/scicompkl/CoDiPack'
     sha_version_ampi = '31b2267c3a55a391a37d830369f2e0dba09008d1'
     github_repo_ampi = 'https://github.com/michel2323/AdjointMPI'
@@ -347,13 +351,13 @@ def init_codi(argument_dict, modes, mpi_support = False, update = False):
     # Build AdjointMPI if MPI Support is requested. If a C compiler was specified as an argument use it here.
     if mpi_support:
         os.chdir('adjointmpi')
-        configure_ampi = './configure --prefix=' + check_output('pwd').rstrip()
+        configure_ampi = './configure --prefix=' + os.getcwd().rstrip()
         if any([not os.path.exists('libAMPI.a'), update]):
             if not argument_dict.get('--with-cc', ' ') == ' ':
                 configure_ampi = configure_ampi + ' --with-mpicc=' + argument_dict['--with-cc']
             print '\nConfiguring and building AdjointMPI in externals/' + alt_name_ampi
             print '====================================================================='
-            run_command(configure_ampi + ' && make clean && make', check_output('pwd').rstrip() + '/preconf_ampi.log', check_output('pwd').rstrip() + '/preconf_ampi.err', os.environ)
+            run_command(configure_ampi + ' && make clean && make', os.getcwd().rstrip() + '/preconf_ampi.log', os.getcwd().rstrip() + '/preconf_ampi.err', os.environ)
         os.chdir(os.pardir)
 
     os.chdir(os.pardir)
@@ -420,6 +424,7 @@ def download_module(name, alt_name, git_repo, commit_sha, logfile, errorfile):
 def configure(argument_dict,
               conf_environ,
               mpi_support,
+	      py_wrapper,
               modes,
               made_adolc,
               made_codi):
@@ -434,6 +439,8 @@ def configure(argument_dict,
     configure_mode = ''
     if mpi_support:
         configure_base = configure_base + ' --enable-mpi'
+    if py_wrapper:
+	configure_base = configure_base + ' --enable-PY_WRAPPER'
 
     build_dirs = ''
 
@@ -461,8 +468,8 @@ def configure(argument_dict,
                 print ''
 
             print '====================================================================='
-            log = check_output('pwd').rstrip() + '/conf_'+ key+'.log'
-            err = check_output('pwd').rstrip() + '/conf_'+ key+'.err'
+            log = os.getcwd().rstrip() + '/conf_'+ key+'.log'
+            err = os.getcwd().rstrip() + '/conf_'+ key+'.err'
 
             if not os.path.exists(key):
                 os.mkdir(key)
@@ -499,7 +506,7 @@ def configure(argument_dict,
            '\tBased on the input to this configuration, add these lines to your .bashrc file: \n' \
            '\n' \
            '\texport SU2_RUN="'+argument_dict['--prefix']+'/bin"\n' \
-           '\texport SU2_HOME="'+check_output('pwd').rstrip()+'"\n' \
+           '\texport SU2_HOME="'+os.getcwd().rstrip()+'"\n' \
            '\texport PATH=$PATH:$SU2_RUN\n' \
            '\texport PYTHONPATH=$PYTHONPATH:$SU2_RUN\n'
 
@@ -560,13 +567,13 @@ def header():
 
     print '-------------------------------------------------------------------------\n'\
           '|    ___ _   _ ___                                                      | \n'\
-          '|   / __| | | |_  )   Release 4.0.1 \'Cardinal\'                          | \n'\
+          '|   / __| | | |_  )   Release 4.3.0 \'Cardinal\'                          | \n'\
           '|   \__ \ |_| |/ /                                                      | \n'\
           '|   |___/\___//___|   Pre-configuration Script                          | \n'\
           '|                                                                       | \n'\
           '------------------------------------------------------------------------- \n'\
-          '| SU2 Lead Dev.: Dr. Francisco Palacios (francisco.palacios@boeing.com).| \n'\
-          '|                Dr. Thomas D. Economon (economon@stanford.edu).        | \n'\
+          '| SU2 Lead Dev.: Dr. Francisco Palacios, Francisco.D.Palacios@boeing.com| \n'\
+          '|                Dr. Thomas D. Economon, economon@stanford.edu          | \n'\
           '------------------------------------------------------------------------- \n'\
           '| SU2 Developers:                                                       | \n'\
           '| - Prof. Juan J. Alonso\'s group at Stanford University.                | \n'\
@@ -574,8 +581,10 @@ def header():
           '| - Prof. Nicolas R. Gauger\'s group at Kaiserslautern U. of Technology. | \n'\
           '| - Prof. Alberto Guardone\'s group at Polytechnic University of Milan.  | \n'\
           '| - Prof. Rafael Palacios\' group at Imperial College London.            | \n'\
+          '| - Prof. Edwin van der Weide\'s group at the University of Twente.      | \n'\
+          '| - Prof. Vincent Terrapon\'s group at the University of Liege.          | \n'\
           '------------------------------------------------------------------------- \n'\
-          '| Copyright (C) 2012-2015 SU2, the open-source CFD code.                | \n'\
+          '| Copyright (C) 2012-2016 SU2, the open-source CFD code.                | \n'\
           '|                                                                       | \n'\
           '| SU2 is free software; you can redistribute it and/or                  | \n'\
           '| modify it under the terms of the GNU Lesser General Public            | \n'\

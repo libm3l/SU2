@@ -2,7 +2,7 @@
  * \file solution_direct_poisson.cpp
  * \brief Main subrotuines for solving direct problems
  * \author F. Palacios
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  *
  * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -12,8 +12,10 @@
  *                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
  *                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
  *                 Prof. Rafael Palacios' group at Imperial College London.
+ *                 Prof. Edwin van der Weide's group at the University of Twente.
+ *                 Prof. Vincent Terrapon's group at the University of Liege.
  *
- * Copyright (C) 2012-2015 SU2, the open-source CFD code.
+ * Copyright (C) 2012-2016 SU2, the open-source CFD code.
  *
  * SU2 is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -48,6 +50,10 @@ CPoissonSolver::CPoissonSolver(CGeometry *geometry, CConfig *config) : CSolver()
   nPointDomain =  geometry->GetnPointDomain();
 	nVar =          1;
 	node =          new CVariable*[nPoint];
+  
+  /*--- Initialize nVarGrad for deallocation ---*/
+  
+  nVarGrad = nVar;
   
 	Residual = new su2double[nVar]; Residual_RMS = new su2double[nVar];
 	Solution = new su2double[nVar];
@@ -115,11 +121,8 @@ CPoissonSolver::CPoissonSolver(CGeometry *geometry, CConfig *config) : CSolver()
 
 CPoissonSolver::~CPoissonSolver(void) {
   
-	unsigned short iVar, iDim;
+	unsigned short iVar;
   
-	delete [] Residual;
-	delete [] Residual_Max;
-	delete [] Solution;
 	delete [] Source_Vector;
   
 	if (nDim == 2) {
@@ -138,14 +141,6 @@ CPoissonSolver::~CPoissonSolver(void) {
 	delete [] StiffMatrix_Elem;
 	delete [] StiffMatrix_Node;
   
-	/*--- Computation of gradients by least-squares ---*/
-	for (iDim = 0; iDim < this->nDim; iDim++)
-		delete [] Smatrix[iDim];
-	delete [] Smatrix;
-  
-	for (iVar = 0; iVar < nVar; iVar++)
-		delete [] cvector[iVar];
-	delete [] cvector;
 }
 
 void CPoissonSolver::Preprocessing(CGeometry *geometry, CSolver **solver_container,
@@ -209,8 +204,8 @@ void CPoissonSolver::Source_Residual(CGeometry *geometry, CSolver **solver_conta
 //				Coord_0 = geometry->node[Point_0]->GetCoord();
 //				Coord_1 = geometry->node[Point_1]->GetCoord();
 //				Coord_2 = geometry->node[Point_2]->GetCoord();
-//        
-//				for (iDim=0; iDim < nDim; iDim++) {
+//
+//				for (iDim = 0; iDim < nDim; iDim++) {
 //					a[iDim] = Coord_0[iDim]-Coord_2[iDim];
 //					b[iDim] = Coord_1[iDim]-Coord_2[iDim];
 //				}
@@ -242,7 +237,7 @@ void CPoissonSolver::Source_Residual(CGeometry *geometry, CSolver **solver_conta
 //				LinSysRes.AddBlock(Point_0, &Source_Vector[0]);
 //				LinSysRes.AddBlock(Point_1, &Source_Vector[1]);
 //				LinSysRes.AddBlock(Point_2, &Source_Vector[2]);
-//        
+//
 //				if (geometry->elem[iElem]->GetVTK_Type() == QUADRILATERAL) {
 //          
 //					Point_0 = geometry->elem[iElem]->GetNode(3);
@@ -252,8 +247,8 @@ void CPoissonSolver::Source_Residual(CGeometry *geometry, CSolver **solver_conta
 //					Coord_0 = geometry->node[Point_0]->GetCoord();
 //					Coord_1 = geometry->node[Point_1]->GetCoord();
 //					Coord_2 = geometry->node[Point_2]->GetCoord();
-//          
-//					for (iDim=0; iDim < nDim; iDim++) {
+//
+//					for (iDim = 0; iDim < nDim; iDim++) {
 //						a[iDim] = Coord_0[iDim]-Coord_2[iDim];
 //						b[iDim] = Coord_1[iDim]-Coord_2[iDim];
 //					}

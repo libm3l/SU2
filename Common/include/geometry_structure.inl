@@ -2,7 +2,7 @@
  * \file geometry_structure.inl
  * \brief In-Line subroutines of the <i>geometry_structure.hpp</i> file.
  * \author F. Palacios, T. Economon
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  *
  * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -12,8 +12,10 @@
  *                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
  *                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
  *                 Prof. Rafael Palacios' group at Imperial College London.
+ *                 Prof. Edwin van der Weide's group at the University of Twente.
+ *                 Prof. Vincent Terrapon's group at the University of Liege.
  *
- * Copyright (C) 2012-2015 SU2, the open-source CFD code.
+ * Copyright (C) 2012-2016 SU2, the open-source CFD code.
  *
  * SU2 is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -91,6 +93,8 @@ inline void CGeometry::Set_MPI_Coord(CConfig *config) { }
 
 inline void CGeometry::Set_MPI_GridVel(CConfig *config) { } 
 
+inline void CGeometry::Set_MPI_OldCoord(CConfig *config) { } 
+
 inline void CGeometry::SetPeriodicBoundary(CConfig *config) { }
 
 inline void CGeometry::SetPeriodicBoundary(CGeometry *geometry, CConfig *config) { }
@@ -151,7 +155,7 @@ inline unsigned long CGeometry::GetnVertex(unsigned short val_marker) { return n
 
 inline unsigned long CGeometry::GetnEdge(void) { return nEdge; }
 
-inline bool CGeometry::FindFace(unsigned long first_elem, unsigned long second_elem, unsigned short &face_first_elem, unsigned short &face_second_elem) {return 0;}
+inline bool CGeometry::FindFace(unsigned long first_elem, unsigned long second_elem, unsigned short &face_first_elem, unsigned short &face_second_elem) { return 0;}
 
 inline void CGeometry::SetBoundVolume(void) { }
 
@@ -161,7 +165,7 @@ inline void CGeometry::SetVertex(CConfig *config) { }
 
 inline void CGeometry::SetVertex(CGeometry *fine_grid, CConfig *config) { }
 
-inline void CGeometry::SetCG(void) { }
+inline void CGeometry::SetCoord_CG(void) { }
 
 inline void CGeometry::SetControlVolume(CConfig *config, unsigned short action) { }
 
@@ -211,7 +215,14 @@ inline void CPhysicalGeometry::SetPoint_Connectivity(CGeometry *geometry) { CGeo
 
 inline void CMultiGridGeometry::SetPoint_Connectivity(void) { CGeometry::SetPoint_Connectivity(); }
 
-inline long CPhysicalGeometry::GetGlobal_to_Local_Point(long val_ipoint) { return Global_to_Local_Point[val_ipoint]; }
+inline long CPhysicalGeometry::GetGlobal_to_Local_Point(long val_ipoint) {
+  map<long, long>::const_iterator MI = Global_to_Local_Point.find(val_ipoint);
+  if (MI != Global_to_Local_Point.end()) {
+    return Global_to_Local_Point[val_ipoint];
+  } else {
+    return -1;
+  }
+}
 
 inline unsigned short CPhysicalGeometry::GetGlobal_to_Local_Marker(unsigned short val_imarker) { return Global_to_Local_Marker[val_imarker]; }
 
@@ -282,12 +293,14 @@ inline vector<vector<unsigned long> > CPhysicalGeometry::GetPlanarPoints() { ret
 
 inline vector<vector<unsigned long> > CMultiGridGeometry::GetPlanarPoints() { return Plane_points; }
 
-inline void CGeometry::SetSensitivity(CConfig* config){}
+inline void CGeometry::SetSensitivity(CConfig* config) {}
 
-inline su2double CGeometry::GetSensitivity(unsigned long iPoint, unsigned short iDim){return 0.0;}
+inline su2double CGeometry::GetSensitivity(unsigned long iPoint, unsigned short iDim) { return 0.0;}
 
-inline su2double CPhysicalGeometry::GetSensitivity(unsigned long iPoint, unsigned short iDim){return Sensitivity[iPoint*nDim+iDim];}
+inline su2double CPhysicalGeometry::GetSensitivity(unsigned long iPoint, unsigned short iDim) { return Sensitivity[iPoint*nDim+iDim];}
 
-inline void CGeometry::SetSensitivity(unsigned long iPoint, unsigned short iDim, su2double val){}
+inline void CGeometry::SetSensitivity(unsigned long iPoint, unsigned short iDim, su2double val) {}
 
-inline void CPhysicalGeometry::SetSensitivity(unsigned long iPoint, unsigned short iDim, su2double val){Sensitivity[iPoint*nDim+iDim] = val;}
+inline void CPhysicalGeometry::SetSensitivity(unsigned long iPoint, unsigned short iDim, su2double val) {Sensitivity[iPoint*nDim+iDim] = val;}
+
+inline void CGeometry::Check_Periodicity(CConfig* config) {}

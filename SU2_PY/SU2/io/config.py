@@ -3,7 +3,7 @@
 ## \file config.py
 #  \brief python package for config 
 #  \author T. Lukaczyk, F. Palacios
-#  \version 4.0.1 "Cardinal"
+#  \version 4.3.0 "Cardinal"
 #
 # SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
 #                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -13,8 +13,10 @@
 #                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
 #                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
 #                 Prof. Rafael Palacios' group at Imperial College London.
+#                 Prof. Edwin van der Weide's group at the University of Twente.
+#                 Prof. Vincent Terrapon's group at the University of Liege.
 #
-# Copyright (C) 2012-2015 SU2, the open-source CFD code.
+# Copyright (C) 2012-2016 SU2, the open-source CFD code.
 #
 # SU2 is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -155,7 +157,9 @@ class Config(ordered_bunch):
         
         # handle unpacking cases
         def_dv = self['DEFINITION_DV']
-        n_dv   = len(def_dv['KIND'])
+
+        n_dv   = sum(def_dv['SIZE'])
+
         if not dv_old: dv_old = [0.0]*n_dv
         assert len(dv_new) == len(dv_old) , 'unexpected design vector length'
         
@@ -164,14 +168,20 @@ class Config(ordered_bunch):
 
         # apply scale
         dv_scales = def_dv['SCALE']
-        dv_new = [ dv_new[i]*dv_scl for i,dv_scl in enumerate(dv_scales) ]
-        dv_old = [ dv_old[i]*dv_scl for i,dv_scl in enumerate(dv_scales) ]
+
+        k = 0
+        for i, dv_scl in enumerate(dv_scales):
+            for j in range(def_dv['SIZE'][i]):
+                dv_new[k] = dv_new[k]*dv_scl;
+                dv_old[k] = dv_old[k]*dv_scl;
+                k = k + 1
         
         # Change the parameters of the design variables
 
         self['DV_KIND'] = def_dv['KIND']
         param_dv['PARAM'] = def_dv['PARAM']
         param_dv['FFDTAG'] = def_dv['FFDTAG']
+        param_dv['SIZE']   = def_dv['SIZE']
 
         self.update({ 'DV_MARKER'        : def_dv['MARKER'][0] ,
                       'DV_VALUE_OLD'     : dv_old              ,
@@ -337,27 +347,39 @@ def read_config(filename):
                 # build list of dv params, convert string to float
                 dv_Parameters = []
                 dv_FFDTag     = []
+                dv_Size       = []
 
                 for this_dvParam in info_General:
                     this_dvParam = this_dvParam.strip('()')
                     this_dvParam = this_dvParam.split(",")
-                    
+                    this_dvSize  = 1
+
                     # if FFD change the first element to work with numbers and float(x)
-                    if data_dict["DV_KIND"][0] in ['FFD_SETTING','FFD_CONTROL_POINT','FFD_DIHEDRAL_ANGLE','FFD_TWIST_ANGLE','FFD_ROTATION','FFD_CAMBER','FFD_THICKNESS','FFD_CONTROL_POINT_2D','FFD_CAMBER_2D','FFD_THICKNESS_2D']:
+                    if data_dict["DV_KIND"][0] in ['FFD_SETTING','FFD_ANGLE_OF_ATTACK','FFD_CONTROL_POINT','FFD_DIHEDRAL_ANGLE','FFD_TWIST_ANGLE','FFD_ROTATION','FFD_CAMBER','FFD_THICKNESS','FFD_CONTROL_POINT_2D','FFD_CAMBER_2D','FFD_THICKNESS_2D']:
                         this_dvFFDTag = this_dvParam[0]
                         this_dvParam[0] = '0'
                     else:
                         this_dvFFDTag = []
 
-                    this_dvParam = [ float(x) for x in this_dvParam ]
-                    
+                    if not data_dict["DV_KIND"][0] in ['NO_DEFORMATION']:
+                        this_dvParam = [ float(x) for x in this_dvParam ]
+
+                    if data_dict["DV_KIND"][0] in ['FFD_CONTROL_POINT_2D']:
+                        if this_dvParam[3] == 0 and this_dvParam[4] == 0:
+                            this_dvSize = 2
+
+                    if data_dict["DV_KIND"][0]in ['FFD_CONTROL_POINT']:
+                        if this_dvParam[4] == 0 and this_dvParam[5] == 0 and this_dvParam[6] == 0:
+                            this_dvSize = 3
+
                     dv_FFDTag     = dv_FFDTag     + [this_dvFFDTag]
                     dv_Parameters = dv_Parameters + [this_dvParam]
+                    dv_Size       = dv_Size       + [this_dvSize]
             
             # store in a dictionary
                 dv_Definitions = { 'FFDTAG' : dv_FFDTag     ,
-                                   'PARAM'  : dv_Parameters }
-
+                                   'PARAM'  : dv_Parameters ,
+                                   'SIZE'   : dv_Size}
 
                 data_dict[this_param] = dv_Definitions
                 break
@@ -377,6 +399,7 @@ def read_config(filename):
             if case("AoA")                    : pass
             if case("FIN_DIFF_STEP")          : pass
             if case("CFL_NUMBER")             : pass
+            if case("HB_PERIOD")    : pass
             if case("WRT_SOL_FREQ")           :
                 data_dict[this_param] = float(this_value)
                 break   
@@ -392,6 +415,7 @@ def read_config(filename):
                 data_dict[this_param] = int(this_value)
                 break                
             
+            
             # unitary design variable definition
             if case("DEFINITION_DV"):
                 # remove white space
@@ -404,6 +428,8 @@ def read_config(filename):
                 dv_Markers    = []
                 dv_FFDTag     = []
                 dv_Parameters = []
+                dv_Size       = []
+
                 for this_General in info_Unitary:
                     if not this_General: continue
                     # split each unitary definition into one general definition
@@ -414,12 +440,14 @@ def read_config(filename):
                     this_dvKind       = get_dvKind( int( info_Kind[0] ) )     
                     this_dvScale      = float( info_Kind[1] )
                     this_dvMarkers    = info_General[1].split(",")
+                    this_dvSize       = 1
+
                     if this_dvKind=='MACH_NUMBER' or this_dvKind=='AOA':
                         this_dvParameters = []
                     else:
                         this_dvParameters = info_General[2].split(",")
                         # if FFD change the first element to work with numbers and float(x), save also the tag
-                        if this_dvKind in ['FFD_SETTING','FFD_CONTROL_POINT','FFD_DIHEDRAL_ANGLE','FFD_TWIST_ANGLE','FFD_ROTATION','FFD_CAMBER','FFD_THICKNESS','FFD_CONTROL_POINT_2D','FFD_CAMBER_2D','FFD_THICKNESS_2D']:
+                        if this_dvKind in ['FFD_SETTING','FFD_ANGLE_OF_ATTACK','FFD_CONTROL_POINT','FFD_DIHEDRAL_ANGLE','FFD_TWIST_ANGLE','FFD_ROTATION','FFD_CAMBER','FFD_THICKNESS','FFD_CONTROL_POINT_2D','FFD_CAMBER_2D','FFD_THICKNESS_2D']:
                           this_dvFFDTag = this_dvParameters[0]
                           this_dvParameters[0] = '0'
                         else:
@@ -427,18 +455,29 @@ def read_config(filename):
                         
                         this_dvParameters = [ float(x) for x in this_dvParameters ]
 
+                        if this_dvKind in ['FFD_CONTROL_POINT_2D']:
+                            if this_dvParameters[3] == 0 and this_dvParameters[4] == 0:
+                                this_dvSize = 2
+
+                        if this_dvKind in ['FFD_CONTROL_POINT']:
+                            if this_dvParameters[4] == 0 and this_dvParameters[5] == 0 and this_dvParameters[6] == 0:
+                                this_dvSize = 3
+
                     # add to lists
                     dv_Kind       = dv_Kind       + [this_dvKind]
                     dv_Scale      = dv_Scale      + [this_dvScale]
                     dv_Markers    = dv_Markers    + [this_dvMarkers]
                     dv_FFDTag     = dv_FFDTag     + [this_dvFFDTag]
                     dv_Parameters = dv_Parameters + [this_dvParameters]
+                    dv_Size       = dv_Size       + [this_dvSize]
                 # store in a dictionary
                 dv_Definitions = { 'KIND'   : dv_Kind       ,
                                    'SCALE'  : dv_Scale      ,
                                    'MARKER' : dv_Markers    ,
                                    'FFDTAG' : dv_FFDTag     ,
-                                   'PARAM'  : dv_Parameters }
+                                   'PARAM'  : dv_Parameters ,
+                                   'SIZE'   : dv_Size}
+
                 # save to output dictionary
                 data_dict[this_param] = dv_Definitions
                 break  
@@ -446,14 +485,19 @@ def read_config(filename):
             # unitary objective definition
             if case('OPT_OBJECTIVE'):
                 # remove white space
-                this_value = ''.join(this_value.split())                
-                # split by scale
-                this_value = this_value.split("*")
-                this_name  = this_value[0]
-                this_scale = 1.0
-                if len(this_value) > 1:
-                    this_scale = float( this_value[1] )
-                this_def = { this_name : {'SCALE':this_scale} }
+                this_value = ''.join(this_value.split())
+                #split by + 
+                this_def={}
+                this_value = this_value.split(";")
+                
+                for  this_obj in this_value:       
+                    # split by scale
+                    this_obj = this_obj.split("*")
+                    this_name  = this_obj[0]
+                    this_scale = 1.0
+                    if len(this_obj) > 1:
+                        this_scale = float( this_obj[1] )
+                    this_def.update({ this_name : {'SCALE':this_scale} })
                 # save to output dictionary
                 data_dict[this_param] = this_def
                 break
@@ -528,9 +572,17 @@ def read_config(filename):
         data_dict['OPT_ITERATIONS'] = 100
     if not data_dict.has_key('OPT_ACCURACY'):
         data_dict['OPT_ACCURACY'] = 1e-10
-    if not data_dict.has_key('BOUND_DV'):
-        data_dict['BOUND_DV'] = 1e10
-    
+    if not data_dict.has_key('OPT_BOUND_UPPER'):
+        data_dict['OPT_BOUND_UPPER'] = 1e10
+    if not data_dict.has_key('OPT_BOUND_LOWER'):
+        data_dict['OPT_BOUND_LOWER'] = -1e10
+    if not data_dict.has_key('OPT_COMBINE_OBJECTIVE'):
+        data_dict['OPT_COMBINE_OBJECTIVE'] = "NO"
+    if not data_dict.has_key('VALUE_OBJFUNC_FILENAME'):
+      data_dict['VALUE_OBJFUNC_FILENAME'] = 'of_eval.dat'
+    if not data_dict.has_key('GRAD_OBJFUNC_FILENAME'):
+      data_dict['GRAD_OBJFUNC_FILENAME'] = 'of_grad.dat'
+ 
     return data_dict
     
 #: def read_config()
@@ -679,7 +731,7 @@ def write_config(filename,param_dict):
                     if not this_kind in ['AOA','MACH_NUMBER']:
                         output_file.write(" | ")
                         # params
-                        if this_kind in ['FFD_SETTING','FFD_CONTROL_POINT','FFD_DIHEDRAL_ANGLE','FFD_TWIST_ANGLE','FFD_ROTATION','FFD_CAMBER','FFD_THICKNESS','FFD_CONTROL_POINT_2D','FFD_CAMBER_2D','FFD_THICKNESS_2D']:
+                        if this_kind in ['FFD_SETTING','FFD_ANGLE_OF_ATTACK','FFD_CONTROL_POINT','FFD_DIHEDRAL_ANGLE','FFD_TWIST_ANGLE','FFD_ROTATION','FFD_CAMBER','FFD_THICKNESS','FFD_CONTROL_POINT_2D','FFD_CAMBER_2D','FFD_THICKNESS_2D']:
                             n_param = len(new_value['PARAM'][i_dv])
                             output_file.write("%s , " % new_value['FFDTAG'][i_dv])
                             for i_param in range(1,n_param):
@@ -701,7 +753,6 @@ def write_config(filename,param_dict):
                 break
             
             if case("OPT_OBJECTIVE"):
-                assert len(new_value.keys())==1 , 'only one OPT_OBJECTIVE is currently supported'
                 i_name = 0
                 for name,value in new_value.iteritems():
                     if i_name>0: output_file.write("; ")

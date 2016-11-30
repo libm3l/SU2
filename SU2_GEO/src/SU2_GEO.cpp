@@ -2,7 +2,7 @@
  * \file SU2_GEO.cpp
  * \brief Main file of the Geometry Definition Code (SU2_GEO).
  * \author F. Palacios, T. Economon
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  *
  * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -12,8 +12,10 @@
  *                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
  *                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
  *                 Prof. Rafael Palacios' group at Imperial College London.
+ *                 Prof. Edwin van der Weide's group at the University of Twente.
+ *                 Prof. Vincent Terrapon's group at the University of Liege.
  *
- * Copyright (C) 2012-2015 SU2, the open-source CFD code.
+ * Copyright (C) 2012-2016 SU2, the open-source CFD code.
  *
  * SU2 is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -104,7 +106,7 @@ int main(int argc, char *argv[]) {
     /*--- Allocate the memory of the current domain, and
      divide the grid between the nodes ---*/
     
-    geometry_container[iZone] = new CPhysicalGeometry(geometry_aux, config_container[iZone], 1);
+    geometry_container[iZone] = new CPhysicalGeometry(geometry_aux, config_container[iZone]);
     
     /*--- Deallocate the memory of geometry_aux ---*/
     
@@ -179,7 +181,7 @@ int main(int argc, char *argv[]) {
   /*--- Compute center of gravity ---*/
   
   if (rank == MASTER_NODE) cout << "Computing centers of gravity." << endl;
-  geometry_container[ZONE_0]->SetCG();
+  geometry_container[ZONE_0]->SetCoord_CG();
   
   /*--- Create the dual control volume structures ---*/
   
@@ -385,8 +387,7 @@ int main(int argc, char *argv[]) {
             case FFD_CAMBER_2D :        surface_movement->SetFFDCamber_2D(geometry_container[ZONE_0], config_container[ZONE_0], FFDBox[iFFDBox], iDV, true); break;
             case FFD_THICKNESS_2D :     surface_movement->SetFFDThickness_2D(geometry_container[ZONE_0], config_container[ZONE_0], FFDBox[iFFDBox], iDV, true); break;
             case FFD_CONTROL_POINT :    surface_movement->SetFFDCPChange(geometry_container[ZONE_0], config_container[ZONE_0], FFDBox[iFFDBox], iDV, true); break;
-            case FFD_DIHEDRAL_ANGLE :   surface_movement->SetFFDDihedralAngle(geometry_container[ZONE_0], config_container[ZONE_0], FFDBox[iFFDBox], iDV, true); break;
-            case FFD_TWIST_ANGLE :      surface_movement->SetFFDTwistAngle(geometry_container[ZONE_0], config_container[ZONE_0], FFDBox[iFFDBox], iDV, true); break;
+            case FFD_TWIST_ANGLE :      surface_movement->SetFFDTwist(geometry_container[ZONE_0], config_container[ZONE_0], FFDBox[iFFDBox], iDV, true); break;
             case FFD_ROTATION :         surface_movement->SetFFDRotation(geometry_container[ZONE_0], config_container[ZONE_0], FFDBox[iFFDBox], iDV, true); break;
             case FFD_CAMBER :           surface_movement->SetFFDCamber(geometry_container[ZONE_0], config_container[ZONE_0], FFDBox[iFFDBox], iDV, true); break;
             case FFD_THICKNESS :        surface_movement->SetFFDThickness(geometry_container[ZONE_0], config_container[ZONE_0], FFDBox[iFFDBox], iDV, true); break;
@@ -409,6 +410,16 @@ int main(int argc, char *argv[]) {
           cout << "Perform 2D deformation of the surface." << endl;
         }
         surface_movement->SetHicksHenne(geometry_container[ZONE_0], config_container[ZONE_0], iDV, true);
+      }
+
+      /*--- CST design variable ---*/
+      
+      else if (config_container[ZONE_0]->GetDesign_Variable(iDV) == CST) {
+        if (rank == MASTER_NODE) {
+          cout << endl << "Design variable number "<< iDV <<"." << endl;
+          cout << "Perform 2D deformation of the surface." << endl;
+        }
+        surface_movement->SetCST(geometry_container[ZONE_0], config_container[ZONE_0], iDV, true);
       }
       
       /*--- Translation design variable ---*/
@@ -460,10 +471,15 @@ int main(int argc, char *argv[]) {
         }
         surface_movement->SetParabolic(geometry_container[ZONE_0], config_container[ZONE_0]);
       }
-      
+      else if (config_container[ZONE_0]->GetDesign_Variable(iDV) == CUSTOM and rank==MASTER_NODE)
+        cout <<"Custom design variable will be used in external script" << endl;
+
       /*--- Design variable not implement ---*/
       
-      else { cout << "Design Variable not implement yet" << endl; }
+      else {
+        if (rank==MASTER_NODE)
+          cout << "Design Variable not implemented yet" << endl;
+      }
       
       /*--- Create airfoil structure ---*/
       for (iPlane = 0; iPlane < nPlane; iPlane++) {

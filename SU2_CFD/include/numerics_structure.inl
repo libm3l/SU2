@@ -2,7 +2,7 @@
  * \file numerics_structure.inl
  * \brief In-Line subroutines of the <i>numerics_structure.hpp</i> file.
  * \author F. Palacios, T. Economon
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  *
  * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -12,8 +12,10 @@
  *                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
  *                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
  *                 Prof. Rafael Palacios' group at Imperial College London.
+ *                 Prof. Edwin van der Weide's group at the University of Twente.
+ *                 Prof. Vincent Terrapon's group at the University of Liege.
  *
- * Copyright (C) 2012-2015 SU2, the open-source CFD code.
+ * Copyright (C) 2012-2016 SU2, the open-source CFD code.
  *
  * SU2 is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -31,59 +33,57 @@
 
 #pragma once
 
-inline su2double CNumerics::Determinant_3x3(su2double A00, su2double A01, su2double A02, su2double A10, su2double A11, su2double A12, su2double A20, su2double A21, su2double A22) {
+inline su2double CNumerics::Determinant_3x3(su2double A00,
+                                            su2double A01,
+                                            su2double A02,
+                                            su2double A10,
+                                            su2double A11,
+                                            su2double A12,
+                                            su2double A20,
+                                            su2double A21,
+                                            su2double A22) {
+  
 	return A00*(A11*A22-A12*A21) - A01*(A10*A22-A12*A20) + A02*(A10*A21-A11*A20);
+  
 }
 
-inline void CNumerics::SetFEA_StiffMatrix2D(su2double **StiffMatrix_Elem, su2double CoordCorners[8][3], unsigned short nNodes, unsigned short form2d) { }
+inline void CNumerics::Compute_Mass_Matrix(CElement *element_container, CConfig *config) { }
 
-inline void CNumerics::SetFEA_StiffMatrix3D(su2double **StiffMatrix_Elem, su2double CoordCorners[8][3], unsigned short nNodes) { }
+inline void CNumerics::Compute_Dead_Load(CElement *element_container, CConfig *config) { }
 
-inline void CNumerics::SetFEA_StiffMassMatrix2D(su2double **StiffMatrix_Elem, su2double **MassMatrix_Elem, su2double CoordCorners[8][3], unsigned short nNodes, unsigned short form2d) { }
+inline void CNumerics::Compute_Tangent_Matrix(CElement *element_container, CConfig *config) { }
 
-inline void CNumerics::SetFEA_StiffMassMatrix3D(su2double **StiffMatrix_Elem, su2double **MassMatrix_Elem, su2double CoordCorners[8][3], unsigned short nNodes) { }
+inline void CFEM_Elasticity::Compute_Tangent_Matrix(CElement *element_container, CConfig *config) { }
 
-inline void CNumerics::GetFEA_StressNodal2D(su2double StressVector[8][3], su2double DispElement[8], su2double CoordCorners[8][3], unsigned short nNodes, unsigned short form2d) { }
+inline void CNumerics::Compute_MeanDilatation_Term(CElement *element_container, CConfig *config) { }
 
-inline void CNumerics::GetFEA_StressNodal3D(su2double StressVector[8][6], su2double DispElement[24], su2double CoordCorners[8][3], unsigned short nNodes) { }
+inline void CFEM_Elasticity::Compute_MeanDilatation_Term(CElement *element_container, CConfig *config) { }
 
-inline void CNumerics::SetFEA_DeadLoad2D(su2double *DeadLoadVector_Elem, su2double CoordCorners[8][3], unsigned short nNodes, su2double matDensity) { }
+inline void CNumerics::Compute_NodalStress_Term(CElement *element_container, CConfig *config) { }
 
-inline void CNumerics::SetFEA_DeadLoad3D(su2double *DeadLoadVector_Elem, su2double CoordCorners[8][3], unsigned short nNodes, su2double matDensity) { }
+inline void CFEM_Elasticity::Compute_NodalStress_Term(CElement *element_container, CConfig *config) { }
 
-inline void CNumerics::PressInt_Linear(su2double CoordCorners[4][3], su2double *tn_e, su2double *Fnodal) { }
+inline void CNumerics::Compute_Averaged_NodalStress(CElement *element_container, CConfig *config) { }
 
-inline void CNumerics::ViscTermInt_Linear(su2double CoordCorners[2][2], su2double Tau_0[3][3], su2double Tau_1[3][3], su2double FviscNodal[4]) { }
+inline void CFEM_Elasticity::Compute_Averaged_NodalStress(CElement *element_container, CConfig *config) { }
 
-inline void CNumerics::Compute_Mass_Matrix(CElement *element_container){ }
+inline void CNumerics::Compute_Plane_Stress_Term(CElement *element_container, CConfig *config) { }
 
-inline void CNumerics::Compute_Tangent_Matrix(CElement *element_container){ }
+inline void CFEM_Elasticity::Compute_Plane_Stress_Term(CElement *element_container, CConfig *config) { }
 
-inline void CFEM_Elasticity::Compute_Tangent_Matrix(CElement *element_container){ }
+inline void CFEM_NonlinearElasticity::Compute_Plane_Stress_Term(CElement *element_container, CConfig *config) { }
 
-inline void CNumerics::Compute_MeanDilatation_Term(CElement *element_container){ }
+inline void CNumerics::Compute_Constitutive_Matrix(CElement *element_container, CConfig *config) { }
 
-inline void CFEM_Elasticity::Compute_MeanDilatation_Term(CElement *element_container){ }
+inline void CFEM_Elasticity::Compute_Constitutive_Matrix(CElement *element_container, CConfig *config) { }
 
-inline void CNumerics::Compute_NodalStress_Term(CElement *element_container){ }
+inline void CFEM_NonlinearElasticity::Compute_Constitutive_Matrix(CElement *element_container, CConfig *config) { }
 
-inline void CFEM_Elasticity::Compute_NodalStress_Term(CElement *element_container){ }
+inline void CNumerics::Compute_Stress_Tensor(CElement *element_container, CConfig *config) { }
 
-inline void CNumerics::Compute_Averaged_NodalStress(CElement *element_container){ }
+inline void CFEM_Elasticity::Compute_Stress_Tensor(CElement *element_container, CConfig *config) { }
 
-inline void CFEM_Elasticity::Compute_Averaged_NodalStress(CElement *element_container){ }
-
-inline void CNumerics::Compute_Constitutive_Matrix(CElement *element_container){ }
-
-inline void CFEM_Elasticity::Compute_Constitutive_Matrix(CElement *element_container){ }
-
-inline void CFEM_NonlinearElasticity::Compute_Constitutive_Matrix(CElement *element_container){ }
-
-inline void CNumerics::Compute_Stress_Tensor(CElement *element_container){ }
-
-inline void CFEM_Elasticity::Compute_Stress_Tensor(CElement *element_container){ }
-
-inline void CFEM_NonlinearElasticity::Compute_Stress_Tensor(CElement *element_container){ }
+inline void CFEM_NonlinearElasticity::Compute_Stress_Tensor(CElement *element_container, CConfig *config) { }
 
 inline void CNumerics::ComputeResidual(su2double *val_residual, CConfig *config) { }
 
@@ -130,36 +130,8 @@ inline void CNumerics::ComputeChemistry(su2double *val_residual, su2double **val
 
 inline void CNumerics::GetKeqConstants(su2double *A, unsigned short val_reaction, CConfig *config) { }
 
-inline void CNumerics::ComputeSourceViscous(su2double *val_residual, CConfig *config) { }
-
 inline su2double CNumerics::GetPrecond_Beta() { return 0; }
 
-inline void CNumerics::SetRhosIndex(unsigned short val_Index) { RHOS_INDEX = val_Index; }
-
-inline void CNumerics::SetRhoIndex(unsigned short val_Index) { RHO_INDEX = val_Index; }
-
-inline void CNumerics::SetPIndex(unsigned short val_Index) { P_INDEX = val_Index; }
-
-inline void CNumerics::SetTIndex(unsigned short val_Index) { T_INDEX = val_Index; }
-  
-inline void CNumerics::SetTveIndex(unsigned short val_Index) { TVE_INDEX = val_Index; }
-
-inline void CNumerics::SetVelIndex(unsigned short val_Index) { VEL_INDEX = val_Index; }
-  
-inline void CNumerics::SetHIndex(unsigned short val_Index) { H_INDEX = val_Index; }
-  
-inline void CNumerics::SetAIndex(unsigned short val_Index) { A_INDEX = val_Index; }
-  
-inline void CNumerics::SetRhoCvtrIndex(unsigned short val_Index) { RHOCVTR_INDEX = val_Index; }
-
-inline void CNumerics::SetRhoCvveIndex(unsigned short val_Index) { RHOCVVE_INDEX = val_Index; }
-
-inline void CNumerics::SetdPdU(su2double *val_dPdU_i, su2double *val_dPdU_j) { dPdU_i = val_dPdU_i; dPdU_j = val_dPdU_j; }
-
-inline void CNumerics::SetdTdU(su2double *val_dTdU_i, su2double *val_dTdU_j) { dTdU_i = val_dTdU_i; dTdU_j = val_dTdU_j; }
-
-inline void CNumerics::SetdTvedU(su2double *val_dTvedU_i, su2double *val_dTvedU_j) { dTvedU_i = val_dTvedU_i; dTvedU_j = val_dTvedU_j; }
-	
 inline void CNumerics::SetUndivided_Laplacian(su2double *val_und_lapl_i, su2double *val_und_lapl_j) {
 	Und_Lapl_i = val_und_lapl_i; 
 	Und_Lapl_j = val_und_lapl_j; 
@@ -271,11 +243,6 @@ inline void CNumerics::SetDistance(su2double val_dist_i, su2double val_dist_j) {
 inline void CNumerics::SetAdjointVar(su2double *val_psi_i, su2double *val_psi_j) {
 	Psi_i = val_psi_i;
 	Psi_j = val_psi_j;
-}
-
-inline void CNumerics::SetLinearizedVar(su2double *val_deltau_i, su2double *val_deltau_j) {
-	DeltaU_i = val_deltau_i;
-	DeltaU_j = val_deltau_j;
 }
 
 inline void CNumerics::SetAdjointVarGradient(su2double **val_psivar_grad_i, su2double **val_psivar_grad_j) {
@@ -486,20 +453,6 @@ inline su2double CSourcePieceWise_TurbSA_Neg::GetProduction(void) { return Produ
 inline su2double CSourcePieceWise_TurbSA_Neg::GetDestruction(void) { return Destruction; }
 
 inline su2double CSourcePieceWise_TurbSA_Neg::GetCrossProduction(void) { return CrossProduction; }
-
-inline void CSourcePieceWise_TurbML::SetIntermittency(su2double intermittency_in) { intermittency = intermittency_in; }
-
-inline void CSourcePieceWise_TurbML::SetProduction(su2double val_production) { Production = val_production; }
-
-inline void CSourcePieceWise_TurbML::SetDestruction(su2double val_destruction) { Destruction = val_destruction; }
-
-inline void CSourcePieceWise_TurbML::SetCrossProduction(su2double val_crossproduction) { CrossProduction = val_crossproduction; }
-
-inline su2double CSourcePieceWise_TurbML::GetProduction(void) { return Production; }
-
-inline su2double CSourcePieceWise_TurbML::GetDestruction(void) { return Destruction; }
-
-inline su2double CSourcePieceWise_TurbML::GetCrossProduction(void) { return CrossProduction; }
 
 inline su2double CUpwTurkel_Flow::GetPrecond_Beta() { return Beta; }
 

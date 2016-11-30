@@ -3,7 +3,7 @@
  * \brief Headers of the main subroutines for generating the file outputs.
  *        The subroutines and functions are in the <i>output_structure.cpp</i> file.
  * \author F. Palacios, T. Economon, M. Colonno
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  *
  * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -13,6 +13,10 @@
  *                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
  *                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
  *                 Prof. Rafael Palacios' group at Imperial College London.
+ *                 Prof. Edwin van der Weide's group at the University of Twente.
+ *                 Prof. Vincent Terrapon's group at the University of Liege.
+ *
+ * Copyright (C) 2012-2016 SU2, the open-source CFD code.
  *
  * SU2 is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -55,7 +59,7 @@ using namespace std;
  * \brief Class for writing the flow, adjoint and linearized solver 
  *        solution (including the history solution, and parallel stuff).
  * \author F. Palacios, T. Economon, M. Colonno.
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  */
 class COutput {
 
@@ -83,10 +87,7 @@ class COutput {
 	int *Conn_Hexa;
 	int *Conn_Pris;
 	int *Conn_Pyra;
-	su2double *Volume;
 	su2double **Data;
-	su2double **residuals, **consv_vars;					// placeholders
-	su2double *p, *rho, *M, *Cp, *Cf, *Ch, *h, *yplus;		// placeholders 
 	unsigned short nVar_Consv, nVar_Total, nVar_Extra, nZones;
 	bool wrote_surf_file, wrote_CGNS_base, wrote_Tecplot_base, wrote_Paraview_base;
   unsigned short wrote_base_file;
@@ -97,9 +98,6 @@ protected:
 
 public:
 
-  unsigned short **nOutput_Vars;
-  su2double ****data_container;
-  
 	/*! 
 	 * \brief Constructor of the class. 
 	 */
@@ -190,6 +188,16 @@ public:
 	 * \param[in] iExtIter - Current external (time) iteration.
 	 */
   void OneDimensionalOutput(CSolver *solver_container, CGeometry *geometry, CConfig *config);
+  
+  /*!
+   * \brief Create and write the file with the flow coefficient on the surface.
+   * \param[in] config - Definition of the particular problem.
+   * \param[in] geometry - Geometrical definition of the problem.
+   * \param[in] FlowSolution - Flow solution.
+   * \param[in] iExtIter - Current external (time) iteration.
+   * \param[in] val_iZone - Current zone number in the grid file.
+   */
+  void WriteSurface_Analysis(CConfig *config, CGeometry *geometry, CSolver *FlowSolver);
 
   /*!
    * \brief Writes mass flow rate output at monitored marker.
@@ -220,16 +228,6 @@ public:
 	 * \param[in] val_iZone - Current zone number in the grid file.
 	 */
 	void SetSurfaceCSV_Adjoint(CConfig *config, CGeometry *geometry, CSolver *AdjSolver, CSolver *FlowSolution, unsigned long iExtIter, unsigned short val_iZone);
-
-	/*! 
-	 * \brief Create and write the file with linearized coefficient on the surface for serial computations
-	 * \param[in] config - Definition of the particular problem.
-	 * \param[in] geometry - Geometrical definition of the problem.
-	 * \param[in] LinSolution - Linearized solution.
-	 * \param[in] val_filename - Name of the output file.
-	 * \param[in] iExtIter - Current external (time) iteration.
-	 */
-	void SetSurfaceCSV_Linearized(CConfig *config, CGeometry *geometry, CSolver *LinSolution, string val_filename, unsigned long iExtIter);
 
   /*!
 	 * \brief Merge the geometry into a data structure used for output file writing.
@@ -511,4 +509,22 @@ public:
    */
   void SetCFL_Number(CSolver ****solver_container, CConfig **config, unsigned short val_iZone);
   
+  /*!
+   * \brief Write the sensitivity (including mesh sensitivity) computed with the discrete adjoint method
+   *  on the surface and in the volume to a file.
+   * \param[in] geometry - Geometrical definition of the problem.
+   * \param[in] config - Definition of the particular problem.
+   * \param[in] val_nZone - Number of Zones.
+   */
+  void SetSensitivity_Files(CGeometry **geometry, CConfig **config, unsigned short val_nZone);
+
+  /*!
+   * \brief Write the output file for harmonic balance for each time-instance.
+   * \param[in] solver_container - Container vector with all the solutions.
+   * \param[in] config - Definition of the particular problem.
+   * \param[in] val_nZone - Number of Zones.
+   * \param[in] val_iZone - Zone index.
+   */
+  void HarmonicBalanceOutput(CSolver ****solver_container, CConfig **config, unsigned short val_nZone, unsigned short val_iZone);
+
 };

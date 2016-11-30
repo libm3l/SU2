@@ -3,7 +3,7 @@
 # \file Makefile.am
 # \brief Makefile for the SU2 common library
 # \author M. Colonno, T. Economon, F. Palacios
-# \version 4.0.1 "Cardinal"
+# \version 4.3.0 "Cardinal"
 #
 # SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
 #                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -13,8 +13,10 @@
 #                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
 #                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
 #                 Prof. Rafael Palacios' group at Imperial College London.
+#                 Prof. Edwin van der Weide's group at the University of Twente.
+#                 Prof. Vincent Terrapon's group at the University of Liege.
 #
-# Copyright (C) 2012-2015 SU2, the open-source CFD code.
+# Copyright (C) 2012-2016 SU2, the open-source CFD code.
 #
 # SU2 is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -49,14 +51,12 @@ noinst_LIBRARIES += libSU2_AD.a
 endif
 
 lib_sources = \
-  ../include/datatypes/adolc_f_structure.hpp \
-  ../include/datatypes/adolc_f_structure.inl \
-  ../include/datatypes/adolc_r_structure.hpp \
-  ../include/datatypes/adolc_r_structure.inl \
   ../include/datatypes/primitive_structure.hpp \
   ../include/datatypes/primitive_structure.inl \
   ../include/datatypes/complex_structure.hpp \
   ../include/datatypes/complex_structure.inl \
+  ../include/ad_structure.hpp \
+  ../include/ad_structure.inl \
   ../include/config_structure.hpp \
   ../include/config_structure.hpp \
   ../include/config_structure.inl \
@@ -83,6 +83,12 @@ lib_sources = \
   ../include/datatype_structure.hpp \
   ../include/datatype_structure.inl \
   ../include/interpolation_structure.hpp \
+  ../include/gauss_structure.hpp \
+  ../include/gauss_structure.inl \
+  ../include/element_structure.hpp \
+  ../include/element_structure.inl \
+  ../include/adt_structure.hpp \
+  ../include/adt_structure.inl \
   ../src/config_structure.cpp \
   ../src/dual_grid_structure.cpp \
   ../src/geometry_structure.cpp \
@@ -94,20 +100,19 @@ lib_sources = \
   ../src/matrix_structure.cpp \
   ../src/mpi_structure.cpp \
   ../src/linear_solvers_structure_b.cpp \
-  ../src/datatype_structure.cpp \
-  ../src/interpolation_structure.cpp
+  ../src/ad_structure.cpp \
+  ../src/gauss_structure.cpp \
+  ../src/element_structure.cpp \
+  ../src/element_linear.cpp \
+  ../src/interpolation_structure.cpp \
+  ../src/adt_structure.cpp
 
-lib_cxxflags =
+lib_cxxflags = -fPIC
 lib_ldadd =
 
 # always link to built dependencies from ./externals
 lib_cxxflags += @su2_externals_INCLUDES@
 lib_ldadd += @su2_externals_LIBS@
-
-# if BUILD_CGNS
-lib_cxxflags += @CGNS_CXX@
-lib_ldadd += @CGNS_LD@
-# endif
 
 # if BUILD_HDF5
 lib_cxxflags += @HDF5_CXX@

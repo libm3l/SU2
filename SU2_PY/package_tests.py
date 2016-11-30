@@ -12,8 +12,10 @@
 #                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
 #                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
 #                 Prof. Rafael Palacios' group at Imperial College London.
+#                 Prof. Edwin van der Weide's group at the University of Twente.
+#                 Prof. Vincent Terrapon's group at the University of Liege.
 #
-# Copyright (C) 2012-2015 SU2, the open-source CFD code.
+# Copyright (C) 2012-2016 SU2, the open-source CFD code.
 #
 # SU2 is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -283,7 +285,7 @@ def level5():
         cons['INEQUALITY']['MOMENT_Z'] = {'SIGN':'>','VALUE':0.034068,'SCALE':1e-2}
         
         def_dv = config.DEFINITION_DV
-        n_dv   = len(def_dv['KIND'])
+        n_dv   = sum(def_dv['KIND'])
         def_dv['SCALE'] = [1.e0]*n_dv
         
         config.OPT_OBJECTIVE  = obj

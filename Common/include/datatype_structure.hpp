@@ -3,9 +3,9 @@
  * \brief Headers for generalized datatypes.
  *        The subroutines and functions are in the <i>datatype_structure.cpp</i> file.
  * \author T. Albring
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  *
- * SU2 Lead Developers: Dr. Francisco Palacios (francisco.palacios@boeing.com).
+ * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
  *
  * SU2 Developers: Prof. Juan J. Alonso's group at Stanford University.
@@ -13,8 +13,10 @@
  *                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
  *                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
  *                 Prof. Rafael Palacios' group at Imperial College London.
+ *                 Prof. Edwin van der Weide's group at the University of Twente.
+ *                 Prof. Vincent Terrapon's group at the University of Liege.
  *
- * Copyright (C) 2012-2015 SU2, the open-source CFD code.
+ * Copyright (C) 2012-2016 SU2, the open-source CFD code.
  *
  * SU2 is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -38,15 +40,10 @@
 /*--- Depending on the datatype defined during the configuration, include the correct datatype
  * definition. Each file uses a typedef from the specific datatype to su2double and implements
  * the routines defined in the namespace SU2_TYPE below. ---*/
+
 #if defined COMPLEX_TYPE
 #include "datatypes/complex_structure.hpp"
 #define SPRINTF sprintfOver
-#elif defined ADOLC_FORWARD_TYPE
-#define SPRINTF sprintfOver
-#include "datatypes/adolc_forward_structure.hpp"
-#elif defined ADOLC_REVERSE_TYPE
-#define SPRINTF sprintfOver
-#include "datatypes/adolc_reverse_structure.hpp"
 #elif defined CODI_REVERSE_TYPE
 #define SPRINTF sprintfOver
 #include "datatypes/codi_reverse_structure.hpp"
@@ -58,7 +55,10 @@
 #include "datatypes/primitive_structure.hpp"
 #endif
 
-/* --- This type can be used for (rare) compatiblity cases or for computations that are intended to be (always) passive. --- */
+#include "ad_structure.hpp"
+
+/*--- This type can be used for (rare) compatiblity cases or for computations that are intended to be (always) passive. ---*/
+
 typedef double passivedouble;
 
 /*!
@@ -66,7 +66,7 @@ typedef double passivedouble;
  * \brief Namespace for defining the datatype wrapper routines; this class features as a base class for
  * type interfaces for non-primitive dataypes e.g. used by AD, complex etc.
  * \author T. Albring
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  */
 namespace SU2_TYPE{
   /*!
@@ -126,48 +126,6 @@ namespace SU2_TYPE{
   short Short(const su2double& data);
 }
 
-/*!
- * \namespace AD
- * \brief Contains routines for the reverse mode of AD.
- * In case there is no reverse type configured, they have no effect at all.
- */
-
-namespace AD{
-  /*!
-   * \brief Start the recording of the operations and involved variables.
-   * If called, the computational graph of all operations occuring after the call will be stored,
-   * starting with the variables registered with RegisterInput.
-   */
-  void StartRecording();
-
-  /*!
-   * \brief Stops the recording of the operations and variables.
-   */
-  void StopRecording();
-
-  /*!
-   * \brief Registers the variable as an input. I.e. as a leaf of the computational graph.
-   * \param[in] data - The variable to be registered as input.
-   */
-  void RegisterInput(su2double &data);
-
-  /*!
-   * \brief Registers the variable as an output. I.e. as the root of the computational graph.
-   * \param[in] data - The variable to be registered as output.
-   */
-  void RegisterOutput(su2double &data);
-
-  /*!
-   * \brief Clears the currently stored adjoints but keeps the computational graph.
-   */
-  void ClearAdjoints();
-
-  /*!
-   * \brief Computes the adjoints, i.e. the derivatives of the output with respect to the input variables.
-   */
-  void ComputeAdjoint();
-
-}
 #include "datatype_structure.inl"
 
 

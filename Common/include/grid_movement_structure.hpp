@@ -1,3 +1,4 @@
+
 /*!
  * \file grid_movement_structure.hpp
  * \brief Headers of the main subroutines for doing the numerical grid 
@@ -5,7 +6,7 @@
  *        technique definition). The subroutines and functions are in 
  *        the <i>grid_movement_structure.cpp</i> file.
  * \author F. Palacios, T. Economon, S. Padron
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  *
  * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -15,8 +16,10 @@
  *                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
  *                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
  *                 Prof. Rafael Palacios' group at Imperial College London.
+ *                 Prof. Edwin van der Weide's group at the University of Twente.
+ *                 Prof. Vincent Terrapon's group at the University of Liege.
  *
- * Copyright (C) 2012-2015 SU2, the open-source CFD code.
+ * Copyright (C) 2012-2016 SU2, the open-source CFD code.
  *
  * SU2 is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -48,7 +51,7 @@
 #include "vector_structure.hpp"
 #include "linear_solvers_structure.hpp"
 
-#include "../../SU2_CFD/include/tmpheader.h"
+#include "../../SU2_CFD/include/ext_man_header.hpp"
 
 using namespace std;
 
@@ -57,7 +60,7 @@ using namespace std;
  * \brief Class for moving the surface and volumetric 
  *        numerical grid (2D and 3D problems).
  * \author F. Palacios
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  */
 class CGridMovement {
 public:
@@ -70,7 +73,7 @@ public:
 	/*! 
 	 * \brief Destructor of the class. 
 	 */
-	~CGridMovement(void);
+         virtual ~CGridMovement(void);
   
   /*!
 	 * \brief A pure virtual member.
@@ -85,7 +88,7 @@ public:
  * \class CFreeFormDefBox
  * \brief Class for defining the free form FFDBox structure.
  * \author F. Palacios & A. Galdran.
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  */
 class CFreeFormDefBox : public CGridMovement {
 public:
@@ -529,8 +532,8 @@ public:
 	 * \param[in] n - Upper coefficient.
 	 * \param[in] m - Lower coefficient.
 	 * \return Value of the binomial coefficient n over m.
-	 */		
-	unsigned long Binomial(unsigned short n, unsigned short m);
+	 */
+	su2double Binomial(unsigned short n, unsigned short m);
 	
 	/*! 
 	 * \brief Get the order in the l direction of the FFD FFDBox.
@@ -739,7 +742,7 @@ public:
  * \class CVolumetricMovement
  * \brief Class for moving the volumetric numerical grid.
  * \author F. Palacios, A. Bueno, T. Economon, S. Padron.
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  */
 class CVolumetricMovement : public CGridMovement {
 protected:
@@ -750,6 +753,8 @@ protected:
 	unsigned long nPoint;		/*!< \brief Number of points. */
 	unsigned long nPointDomain;		/*!< \brief Number of points in the domain. */
 
+	unsigned long nIterMesh;	/*!< \brief Number of iterations in the mesh update. +*/
+
   CSysMatrix StiffMatrix; /*!< \brief Matrix to store the point-to-point stiffness. */
   CSysVector LinSysSol;
   CSysVector LinSysRes;
@@ -759,7 +764,7 @@ public:
 	/*! 
 	 * \brief Constructor of the class.
 	 */
-	CVolumetricMovement(CGeometry *geometry);
+	CVolumetricMovement(CGeometry *geometry, CConfig *config);
 	
 	/*! 
 	 * \brief Destructor of the class. 
@@ -790,31 +795,42 @@ public:
   /*!
 	 * \brief Compute the stiffness matrix for grid deformation using spring analogy.
 	 * \param[in] geometry - Geometrical definition of the problem.
+	 * \param[in] config - Definition of the particular problem.
 	 * \return Value of the length of the smallest edge of the grid.
 	 */
 	su2double SetFEAMethodContributions_Elem(CGeometry *geometry, CConfig *config);
   
   /*!
-	 * \brief Build the stiffness matrix for a 3-D hexahedron element. The result will be placed in StiffMatrix_Elem.
-	 * \param[in] geometry - Geometrical definition of the problem.
+   * \brief Build the stiffness matrix for a 3-D hexahedron element. The result will be placed in StiffMatrix_Elem.
+   * \param[in] geometry - Geometrical definition of the problem.
+   * \param[in] config - Definition of the particular problem.
    * \param[in] StiffMatrix_Elem - Element stiffness matrix to be filled.
-	 * \param[in] CoordCorners - Index value for Node 1 of the current hexahedron.
-	 */
-  void SetFEA_StiffMatrix3D(CGeometry *geometry, CConfig *config, su2double **StiffMatrix_Elem, unsigned long PointCorners[8], su2double CoordCorners[8][3], unsigned short nNodes, su2double scale);
-	
-  /*!
-	 * \brief Build the stiffness matrix for a 3-D hexahedron element. The result will be placed in StiffMatrix_Elem.
-	 * \param[in] geometry - Geometrical definition of the problem.
-   * \param[in] StiffMatrix_Elem - Element stiffness matrix to be filled.
-	 * \param[in] CoordCorners - Index value for Node 1 of the current hexahedron.
-	 */
-  void SetFEA_StiffMatrix2D(CGeometry *geometry, CConfig *config, su2double **StiffMatrix_Elem, unsigned long PointCorners[8], su2double CoordCorners[8][3], unsigned short nNodes, su2double scale);
+   * \param[in] CoordCorners - Index value for Node 1 of the current hexahedron.
+   * \param[in] PointCorners - Index values for element corners
+   * \param[in] nNodes - Number of nodes defining the element.
+   * \param[in] scale
+   */
+  void SetFEA_StiffMatrix3D(CGeometry *geometry, CConfig *config, su2double **StiffMatrix_Elem, unsigned long PointCorners[8], su2double CoordCorners[8][3],
+                            unsigned short nNodes, su2double ElemVolume, su2double ElemDistance);
   
+  /*!
+   * \brief Build the stiffness matrix for a 3-D hexahedron element. The result will be placed in StiffMatrix_Elem.
+   * \param[in] geometry - Geometrical definition of the problem.
+   * \param[in] config - Definition of the particular problem.
+   * \param[in] StiffMatrix_Elem - Element stiffness matrix to be filled.
+   * \param[in] CoordCorners - Index value for Node 1 of the current hexahedron.
+   * \param[in] PointCorners - Index values for element corners
+   * \param[in] nNodes - Number of nodes defining the element.
+   * \param[in] scale
+   */
+  void SetFEA_StiffMatrix2D(CGeometry *geometry, CConfig *config, su2double **StiffMatrix_Elem, unsigned long PointCorners[8], su2double CoordCorners[8][3],
+                            unsigned short nNodes, su2double ElemVolume, su2double ElemDistance);
+    
   /*!
 	 * \brief Shape functions and derivative of the shape functions
    * \param[in] Xi - Local coordinates.
    * \param[in] Eta - Local coordinates.
-   * \param[in] Mu - Local coordinates.
+   * \param[in] Zeta - Local coordinates.
 	 * \param[in] CoordCorners - Coordiantes of the corners.
    * \param[in] DShapeFunction - Shape function information
 	 */
@@ -824,7 +840,7 @@ public:
 	 * \brief Shape functions and derivative of the shape functions
    * \param[in] Xi - Local coordinates.
    * \param[in] Eta - Local coordinates.
-   * \param[in] Mu - Local coordinates.
+   * \param[in] Zeta - Local coordinates.
 	 * \param[in] CoordCorners - Coordiantes of the corners.
    * \param[in] DShapeFunction - Shape function information
 	 */
@@ -834,7 +850,7 @@ public:
 	 * \brief Shape functions and derivative of the shape functions
    * \param[in] Xi - Local coordinates.
    * \param[in] Eta - Local coordinates.
-   * \param[in] Mu - Local coordinates.
+   * \param[in] Zeta - Local coordinates.
 	 * \param[in] CoordCorners - Coordiantes of the corners.
    * \param[in] DShapeFunction - Shape function information
 	 */
@@ -844,7 +860,7 @@ public:
 	 * \brief Shape functions and derivative of the shape functions
    * \param[in] Xi - Local coordinates.
    * \param[in] Eta - Local coordinates.
-   * \param[in] Mu - Local coordinates.
+   * \param[in] Zeta - Local coordinates.
 	 * \param[in] CoordCorners - Coordiantes of the corners.
    * \param[in] DShapeFunction - Shape function information
 	 */
@@ -908,8 +924,8 @@ public:
 	 * \brief Add the stiffness matrix for a 2-D triangular element to the global stiffness matrix for the entire mesh (node-based).
 	 * \param[in] geometry - Geometrical definition of the problem.
    * \param[in] StiffMatrix_Elem - Element stiffness matrix to be filled.
-   * \param[in] PointCorners
-   * \param[in] nNodes
+   * \param[in] PointCorners - Index values for element corners
+   * \param[in] nNodes - Number of nodes defining the element.
 	 */
   void AddFEA_StiffMatrix(CGeometry *geometry, su2double **StiffMatrix_Elem, unsigned long PointCorners[8], unsigned short nNodes);
   
@@ -917,15 +933,16 @@ public:
 	 * \brief Check for negative volumes (all elements) after performing grid deformation.
 	 * \param[in] geometry - Geometrical definition of the problem.
 	 */
-	su2double Check_Grid(CGeometry *geometry);
+  void ComputeDeforming_Element_Volume(CGeometry *geometry, su2double &MinVolume, su2double &MaxVolume);
+  
   
   /*!
 	 * \brief Compute the minimum distance to the nearest deforming surface.
 	 * \param[in] geometry - Geometrical definition of the problem.
    * \param[in] config - Definition of the particular problem.
 	 */
-  void ComputeDeforming_Wall_Distance(CGeometry *geometry, CConfig *config);
-  
+  void ComputeDeforming_Wall_Distance(CGeometry *geometry, CConfig *config, su2double &MinDistance, su2double &MaxDistance);
+    
 	/*!
 	 * \brief Check the boundary vertex that are going to be moved.
 	 * \param[in] geometry - Geometrical definition of the problem.
@@ -1053,13 +1070,25 @@ public:
 	 */
 	su2double Determinant_3x3(su2double A00, su2double A01, su2double A02, su2double A10, su2double A11, su2double A12, su2double A20, su2double A21, su2double A22);
 
+
+	/*!
+	 * \brief Store the number of iterations when moving the mesh.
+	 * \param[in] val_nIterMesh - Number of iterations.
+	 */
+	void Set_nIterMesh(unsigned long val_nIterMesh);
+
+	/*!
+	 * \brief Retrieve the number of iterations when moving the mesh.
+	 * \param[out] Number of iterations.
+	 */
+	unsigned long Get_nIterMesh(void);
 };
 
 /*! 
  * \class CSurfaceMovement
  * \brief Class for moving the surface numerical grid.
  * \author F. Palacios, T. Economon.
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  */
 class CSurfaceMovement : public CGridMovement {
 protected:
@@ -1094,6 +1123,24 @@ public:
 	 */
 	void SetHicksHenne(CGeometry *boundary, CConfig *config, unsigned short iDV, bool ResetDef);
   
+  /*!
+   * \brief Set a Hicks-Henne deformation bump functions on an airfoil.
+   * \param[in] boundary - Geometry of the boundary.
+   * \param[in] config - Definition of the particular problem.
+   * \param[in] iDV - Index of the design variable.
+   * \param[in] ResetDef - Reset the deformation before starting a new one.
+   */
+  void SetAngleOfAttack(CGeometry *boundary, CConfig *config, unsigned short iDV, bool ResetDef);
+
+	/*! 
+	 * \brief Set a deformation based on a change in the Kulfan parameters for an airfoil.
+	 * \param[in] boundary - Geometry of the boundary.
+	 * \param[in] config - Definition of the particular problem.
+	 * \param[in] iDV - Index of the design variable.
+	 * \param[in] ResetDef - Reset the deformation before starting a new one.
+	 */
+	void SetCST(CGeometry *boundary, CConfig *config, unsigned short iDV, bool ResetDef);
+
 	/*! 
 	 * \brief Set a NACA 4 digits airfoil family for airfoil deformation.
 	 * \param[in] boundary - Geometry of the boundary.
@@ -1123,7 +1170,7 @@ public:
 	 * \param[in] ResetDef - Reset the deformation before starting a new one.
 	 */
 	void SetRotation(CGeometry *boundary, CConfig *config, unsigned short iDV, bool ResetDef);
-  
+
   /*!
 	 * \brief Set the translational/rotational velocity for a moving wall.
 	 * \param[in] geometry - Geometrical definition of the problem.
@@ -1172,6 +1219,16 @@ public:
 	 */
 	void Surface_Rotating(CGeometry *geometry, CConfig *config,
                         unsigned long iter, unsigned short iZone);
+  
+  /*!
+   * \brief Computes the displacement of a rotating surface for a dynamic mesh simulation.
+   * \param[in] geometry - Geometrical definition of the problem.
+   * \param[in] config - Definition of the particular problem.
+   * \param[in] iter - Current physical time iteration.
+   * \param[in] iZone - Zone number in the mesh.
+   */
+  void HTP_Rotation(CGeometry *geometry, CConfig *config,
+                    unsigned long iter, unsigned short iZone);
 
     /*!
 	 * \brief Unsteady aeroelastic grid movement by deforming the mesh.
@@ -1356,17 +1413,17 @@ public:
 	 * \param[in] ResetDef - Reset the deformation before starting a new one.
 	 */		
 	void SetFFDThickness(CGeometry *geometry, CConfig *config, CFreeFormDefBox *FFDBox, unsigned short iDV, bool ResetDef);
-	
-	/*! 
-	 * \brief Set a dihedral angle deformation of the Free From box using the control point position.
-	 * \param[in] geometry - Geometrical definition of the problem.
-	 * \param[in] config - Definition of the particular problem.
-	 * \param[in] FFDBox - Array with all the free forms FFDBoxes of the computation.
-	 * \param[in] iDV - Index of the design variable.
-	 * \param[in] ResetDef - Reset the deformation before starting a new one.
-	 */		
-	void SetFFDDihedralAngle(CGeometry *geometry, CConfig *config, CFreeFormDefBox *FFDBox, unsigned short iDV, bool ResetDef);
-	
+  
+  /*!
+   * \brief Set a thickness deformation of the Free From box using the control point position.
+   * \param[in] geometry - Geometrical definition of the problem.
+   * \param[in] config - Definition of the particular problem.
+   * \param[in] FFDBox - Array with all the free forms FFDBoxes of the computation.
+   * \param[in] iDV - Index of the design variable.
+   * \param[in] ResetDef - Reset the deformation before starting a new one.
+   */
+  void SetFFDAngleOfAttack(CGeometry *geometry, CConfig *config, CFreeFormDefBox *FFDBox, CFreeFormDefBox **ResetFFDBox, unsigned short iDV, bool ResetDef);
+
 	/*! 
 	 * \brief Set a twist angle deformation of the Free From box using the control point position.
 	 * \param[in] geometry - Geometrical definition of the problem.
@@ -1375,7 +1432,7 @@ public:
 	 * \param[in] iDV - Index of the design variable.
 	 * \param[in] ResetDef - Reset the deformation before starting a new one.
 	 */		
-	void SetFFDTwistAngle(CGeometry *geometry, CConfig *config, CFreeFormDefBox *FFDBox, unsigned short iDV, bool ResetDef);
+	void SetFFDTwist(CGeometry *geometry, CConfig *config, CFreeFormDefBox *FFDBox, unsigned short iDV, bool ResetDef);
 	
 	/*! 
 	 * \brief Set a rotation angle deformation of the Free From box using the control point position.
@@ -1441,6 +1498,15 @@ public:
 	 */		
 	bool GetFFDBoxDefinition(void);
 	
+  /*!
+   * \brief Check if the design variable definition matches the FFD box definition.
+   * \param[in] config - Definition of the particular problem.
+   * \param[in] iDV - Index of the design variable.
+   * \return <code>TRUE</code> if the FFD box name referenced with DV_PARAM can be found in the FFD box definition;
+   * otherwise <code>FALSE</code>.
+   */
+  bool CheckFFDBoxDefinition(CConfig* config, unsigned short iDV);
+
 	/*! 
 	 * \brief Obtain the number of FFDBoxes.
 	 * \return Number of FFD FFDBoxes.

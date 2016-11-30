@@ -2,3 +2,7 @@
 	path = externals/adjointmpi
 	url = https://github.com/michel2323/AdjointMPI.git
         ignore = dirty
+[submodule "externals/codi"]
+	path = externals/codi
+	url = https://github.com/scicompkl/CoDiPack.git
+	ignore = dirty

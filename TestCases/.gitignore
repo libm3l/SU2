@@ -9,15 +9,18 @@
 # changes to the meshes/solutions/restarts.
 
 # Things appearing in TestCases/ repo to ignore:
-*.su2 
-*.dat 
+*.su2
+*.dat
+*.vtk
 *.csv
-*.plt 
-*.pw 
-*.IGS 
-*.cgns 
+*.plt
+*.pw
+*.IGS
+*.cgns
 *.tgz
 COPYING
 README.md
 *.autotest
 config_*.cfg
+*.ref*
+*.eqn

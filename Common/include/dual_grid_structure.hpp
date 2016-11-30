@@ -3,7 +3,7 @@
  * \brief Headers of the main subroutines for doing the complete dual grid structure.
  *        The subroutines and functions are in the <i>dual_grid_structure.cpp</i> file.
  * \author F. Palacios, T. Economon
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  *
  * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -13,8 +13,10 @@
  *                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
  *                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
  *                 Prof. Rafael Palacios' group at Imperial College London.
+ *                 Prof. Edwin van der Weide's group at the University of Twente.
+ *                 Prof. Vincent Terrapon's group at the University of Liege.
  *
- * Copyright (C) 2012-2015 SU2, the open-source CFD code.
+ * Copyright (C) 2012-2016 SU2, the open-source CFD code.
  *
  * SU2 is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -48,7 +50,7 @@ using namespace std;
  * \brief Class for controlling the dual volume definition. The dual volume is compose by 
  *        three main elements: points, edges, and vertices.
  * \author F. Palacios
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  */
 class CDualGrid{
 protected:
@@ -65,7 +67,7 @@ public:
 	/*! 
 	 * \brief Destructor of the class. 
 	 */
-	~CDualGrid(void);
+	virtual ~CDualGrid(void);
 	
 	/*! 
 	 * \brief A pure virtual member.
@@ -133,42 +135,42 @@ public:
  * \class CPoint
  * \brief Class for point definition (including control volume definition).
  * \author F. Palacios
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  */
 class CPoint : public CDualGrid {
 private:
-	unsigned short nElem,	/*!< \brief Number of elements that set up the control volume. */
-	nPoint;					/*!< \brief Number of points that set up the control volume  */
-	vector<long> Elem;		/*!< \brief Elements that set up a control volume around a node. */
-	vector<unsigned long> Point;	/*!< \brief Points surrounding the central node of the control volume. */
-	vector<long> Edge;		/*!< \brief Edges that set up a control volume. */
-	su2double *Volume;	/*!< \brief Volume or Area of the control volume in 3D and 2D. */
-	bool Domain,		/*!< \brief Indicates if a point must be computed or belong to another boundary */
-	Boundary,       /*!< \brief To see if a point belong to the boundary (including MPI). */
-  PhysicalBoundary,			/*!< \brief To see if a point belong to the physical boundary (without includin MPI). */
-  SolidBoundary;			/*!< \brief To see if a point belong to the physical boundary (without includin MPI). */
-	long *vertex; /*!< \brief Index of the vertex that correspond which the control volume (we need one for each marker in the same node). */
-	su2double *coord,	/*!< \brief vector with the coordinates of the node. */
-	*Coord_old,		/*!< \brief Old coordinates vector for geometry smoothing. */
-	*Coord_sum,		/*!< \brief Sum of coordinates vector for geometry smoothing. */
-  *Coord_n,		/*!< \brief Coordinates at time n for use with dynamic meshes. */
-  *Coord_n1,		/*!< \brief Coordinates at time n-1 for use with dynamic meshes. */
-  *Coord_p1;		/*!< \brief Coordinates at time n+1 for use with dynamic meshes. */
-	su2double *GridVel;	/*!< \brief Velocity of the grid for dynamic mesh cases. */
-  su2double **GridVel_Grad;  /*!< \brief Gradient of the grid velocity for dynamic meshes. */
-	unsigned long Parent_CV;			/*!< \brief Index of the parent control volume in the agglomeration process. */
-	unsigned short nChildren_CV;		/*!< \brief Number of children in the agglomeration process. */
-	vector<unsigned long> Children_CV;		/*!< \brief Index of the children control volumes in the agglomeration process. */
-	bool Agglomerate_Indirect;					/*!< \brief This flag indicates if the indirect points can be agglomerated. */
-	bool Agglomerate;					/*!< \brief This flag indicates if the element has been agglomerated. */
-	bool Move;					/*!< \brief This flag indicates if the point is going to be move in the grid deformation process. */
-	unsigned short color;	/*!< \brief Color of the point in the partitioning strategy. */
-	su2double Wall_Distance;	/*!< \brief Distance to the nearest wall. */
-  su2double SharpEdge_Distance;	/*!< \brief Distance to a sharp edge. */
-  su2double Curvature;	/*!< \brief Value of the surface curvature (SU2_GEO). */
-	unsigned long GlobalIndex;	/*!< \brief Global index in the parallel simulation. */
-	unsigned short nNeighbor;	/*!< \brief Color of the point in the partitioning strategy. */
-  bool Flip_Orientation;	/*!< \brief Flip the orientation of the normal. */
+  unsigned short nElem,               /*!< \brief Number of elements that set up the control volume. */
+  nPoint;                             /*!< \brief Number of points that set up the control volume  */
+  vector<long> Elem;                  /*!< \brief Elements that set up a control volume around a node. */
+  vector<unsigned long> Point;        /*!< \brief Points surrounding the central node of the control volume. */
+  vector<long> Edge;                  /*!< \brief Edges that set up a control volume. */
+  su2double *Volume;                  /*!< \brief Volume or Area of the control volume in 3D and 2D. */
+  bool Domain,                        /*!< \brief Indicates if a point must be computed or belong to another boundary */
+  Boundary,                           /*!< \brief To see if a point belong to the boundary (including MPI). */
+  PhysicalBoundary,                   /*!< \brief To see if a point belong to the physical boundary (without includin MPI). */
+  SolidBoundary;                      /*!< \brief To see if a point belong to the physical boundary (without includin MPI). */
+  long *Vertex;                       /*!< \brief Index of the vertex that correspond which the control volume (we need one for each marker in the same node). */
+  su2double *Coord,                   /*!< \brief vector with the coordinates of the node. */
+  *Coord_Old,                         /*!< \brief Old coordinates vector for geometry smoothing. */
+  *Coord_Sum,                         /*!< \brief Sum of coordinates vector for geometry smoothing. */
+  *Coord_n,                           /*!< \brief Coordinates at time n for use with dynamic meshes. */
+  *Coord_n1,                          /*!< \brief Coordinates at time n-1 for use with dynamic meshes. */
+  *Coord_p1;                          /*!< \brief Coordinates at time n+1 for use with dynamic meshes. */
+  su2double *GridVel;                 /*!< \brief Velocity of the grid for dynamic mesh cases. */
+  su2double **GridVel_Grad;           /*!< \brief Gradient of the grid velocity for dynamic meshes. */
+  unsigned long Parent_CV;            /*!< \brief Index of the parent control volume in the agglomeration process. */
+  unsigned short nChildren_CV;        /*!< \brief Number of children in the agglomeration process. */
+  vector<unsigned long> Children_CV;  /*!< \brief Index of the children control volumes in the agglomeration process. */
+  bool Agglomerate_Indirect,					/*!< \brief This flag indicates if the indirect points can be agglomerated. */
+  Agglomerate;                        /*!< \brief This flag indicates if the element has been agglomerated. */
+  bool Move;                          /*!< \brief This flag indicates if the point is going to be move in the grid deformation process. */
+  unsigned short color;               /*!< \brief Color of the point in the partitioning strategy. */
+  su2double Wall_Distance;            /*!< \brief Distance to the nearest wall. */
+  su2double SharpEdge_Distance;       /*!< \brief Distance to a sharp edge. */
+  su2double Curvature;                /*!< \brief Value of the surface curvature (SU2_GEO). */
+  unsigned long GlobalIndex;          /*!< \brief Global index in the parallel simulation. */
+  unsigned short nNeighbor;           /*!< \brief Number of neighbors. */
+  bool Flip_Orientation;              /*!< \brief Flip the orientation of the normal. */
 
 public:
 	
@@ -538,6 +540,18 @@ public:
 	 * \brief Set the coordinates of the control volume at time n-1.
 	 */
 	void SetCoord_n1(void);
+
+	/*!
+	 * \brief Set the coordinates of the control volume at time n, for restart cases.
+	 * \param[in] val_coord - Value of the grid coordinates at time n.
+	 */
+	void SetCoord_n(su2double *val_coord);
+
+	/*!
+	 * \brief Set the coordinates of the control volume at time n-1, for restart cases.
+	 * \param[in] val_coord - Value of the grid coordinates at time n-1.
+	 */
+	void SetCoord_n1(su2double *val_coord);
   
 	/*! 
 	 * \brief Set the coordinates of the control volume at time n+1.
@@ -637,19 +651,19 @@ public:
 	 */
 	su2double **GetGridVel_Grad(void);
 	
-	/*! 
-	 * \brief Add the value of the coordinates to the <i>Coord_sum</i> vector for implicit smoothing.
+	/*!
+	 * \brief Add the value of the coordinates to the <i>Coord_Sum</i> vector for implicit smoothing.
 	 * \param[in] val_coord_sum - Value of the coordinates to add.
 	 */	
 	void AddCoord_Sum(su2double *val_coord_sum);
 	
-	/*! 
-	 * \brief Initialize the vector <i>Coord_sum</i>.
+	/*!
+	 * \brief Initialize the vector <i>Coord_Sum</i>.
 	 */	
 	void SetCoord_SumZero(void);
 	
-	/*! 
-	 * \brief Set the value of the vector <i>Coord_old</i> for implicit smoothing.
+	/*!
+	 * \brief Set the value of the vector <i>Coord_Old</i> for implicit smoothing.
 	 * \param[in] val_coord_old - Value of the coordinates.
 	 */	
 	void SetCoord_Old(su2double *val_coord_old);
@@ -728,7 +742,7 @@ public:
  * \class CEdge
  * \brief Class for defining an edge.
  * \author F. Palacios
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  */
 class CEdge : public CDualGrid {
 private:
@@ -755,7 +769,7 @@ public:
 	 * \brief Set the center of gravity of the edge.
 	 * \param[in] val_coord - Coordinates of all the nodes needed for computing the centre of gravity of an edge.
 	 */
-	void SetCG(su2double **val_coord);
+	void SetCoord_CG(su2double **val_coord);
 	
 	/*! 
 	 * \brief Obtain the centre of gravity of the edge.
@@ -865,7 +879,7 @@ public:
  * \class CVertex
  * \brief Class for vertex definition (equivalent to edges, but for the boundaries).
  * \author F. Palacios
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  */
 class CVertex : public CDualGrid {
 private:
@@ -875,7 +889,8 @@ private:
 	su2double CartCoord[3];		/*!< \brief Vertex cartesians coordinates. */
 	su2double VarCoord[3];		/*!< \brief Used for storing the coordinate variation due to a surface modification. */
 	su2double *VarRot;   /*!< \brief Used for storing the rotation variation due to a surface modification. */
-	long PeriodicPoint[3];			/*!< \brief Store the periodic point of a boundary (iProcessor, iPoint) */
+	long PeriodicPoint[5];			/*!< \brief Store the periodic point of a boundary (iProcessor, iPoint) */
+  bool ActDisk_Perimeter;     /*!< \brief Identify nodes at the perimeter of the actuator disk */
 	short Rotation_Type;			/*!< \brief Type of rotation associated with the vertex (MPI and periodic) */
 	unsigned long Normal_Neighbor; /*!< \brief Index of the closest neighbor. */
 	unsigned long *Donor_Points; /*!< \brief indices of donor points for interpolation across zones */
@@ -1033,6 +1048,13 @@ public:
 	 */
 	void SetDonorPoint(long val_periodicpoint, long val_processor);
 	
+  /*!
+   * \overload
+   * \param[in] val_periodicpoint - Value of periodic point of the vertex.
+   * \param[in] val_processor - Processor where the point belong.
+   */
+  void SetDonorPoint(long val_periodicpoint, long val_periodicglobalindex, long val_periodicvertex, long val_periodicmarker, long val_processor);
+  
 	/*! 
 	 * \overload
 	 * \param[in] val_periodicpoint - Value of periodic point of the vertex.
@@ -1040,6 +1062,13 @@ public:
 	 * \param[in] val_globalindex - Global index of the donor point.
 	 */
 	void SetDonorPoint(long val_periodicpoint, long val_processor, long val_globalindex);
+  
+  /*!
+   * \overload
+   * \param[in] val_periodicpoint - Value of periodic point of the vertex.
+   * \param[in] val_processor - Processor where the point belong.
+   */
+  void SetActDisk_Perimeter(bool val_actdisk_perimeter);
 
 	/*!
 	 * \brief Get the value of the periodic point of a vertex.
@@ -1048,16 +1077,34 @@ public:
 	long GetDonorPoint(void);
   
   /*!
+   * \brief Get the value of the periodic point of a vertex.
+   * \return Value of the periodic point of a vertex.
+   */
+  long GetDonorMarker(void);
+  
+  /*!
+   * \brief Get the value of the periodic point of a vertex.
+   * \return Value of the periodic point of a vertex.
+   */
+  long GetDonorVertex(void);
+
+  /*!
+   * \brief Get the value of the periodic point of a vertex.
+   * \return Value of the periodic point of a vertex.
+   */
+  long GetDonorGlobalIndex(void);
+  
+  /*!
+   * \brief Get the value of the periodic point of a vertex.
+   * \return Value of the periodic point of a vertex.
+   */
+  long GetGlobalDonorPoint(void);
+
+  /*!
 	 * \brief Get the value of the periodic point of a vertex.
 	 * \return Value of the periodic point of a vertex.
 	 */
 	long GetDonorProcessor(void);
-
-  /*!
-	 * \brief Get the value of the global index for the donor point of a vertex.
-	 * \return Value of the global index for the donor point of a vertex.
-	 */
-	long GetGlobalDonorPoint(void);
   
 	/*! 
 	 * \brief Get the value of the periodic point of a vertex, and its somain
@@ -1066,11 +1113,17 @@ public:
 	long *GetPeriodicPointDomain(void);	
   
   /*!
+   * \brief Get the value of the periodic point of a vertex, and its somain
+   * \return Value of the periodic point of a vertex, and the domain.
+   */
+  bool GetActDisk_Perimeter(void);
+
+  /*!
 	 * \brief Set the donor element of a vertex for interpolation across zones.
 	 * \param[in] val_donorelem - donor element index.
 	 */
 	void SetDonorElem(long val_donorelem);
-
+  
   /*!
 	 * \brief Get the donor element of a vertex for interpolation across zones.
 	 * \return Value of the donor element of a vertex.

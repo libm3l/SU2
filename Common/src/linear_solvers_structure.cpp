@@ -2,7 +2,7 @@
  * \file linear_solvers_structure.cpp
  * \brief Main classes required for solving linear systems of equations
  * \author J. Hicken, F. Palacios, T. Economon
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  *
  * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -12,6 +12,10 @@
  *                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
  *                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
  *                 Prof. Rafael Palacios' group at Imperial College London.
+ *                 Prof. Edwin van der Weide's group at the University of Twente.
+ *                 Prof. Vincent Terrapon's group at the University of Liege.
+ *
+ * Copyright (C) 2012-2016 SU2, the open-source CFD code.
  *
  * SU2 is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -308,7 +312,7 @@ int rank = 0;
 //    }
 //  }
 	
-	return i;
+	return (unsigned long) i;
   
 }
 
@@ -463,7 +467,7 @@ int rank = 0;
 //  }
 	
   (*residual) = beta;
-	return i;
+	return (unsigned long) i;
   
 }
 
@@ -599,7 +603,7 @@ unsigned long CSysSolve::BCGSTAB_LinSolver(const CSysVector & b, CSysVector & x,
 //  }
 	
   (*residual) = norm_r;
-	return i;
+	return (unsigned long) i;
 }
 
 unsigned long CSysSolve::Solve(CSysMatrix & Jacobian, CSysVector & LinSysRes, CSysVector & LinSysSol, CGeometry *geometry, CConfig *config) {
@@ -611,15 +615,15 @@ unsigned long CSysSolve::Solve(CSysMatrix & Jacobian, CSysVector & LinSysRes, CS
 
   bool TapeActive = NO;
 
-  if (config->GetDiscrete_Adjoint()){
+  if (config->GetDiscrete_Adjoint()) {
 #ifdef CODI_REVERSE_TYPE
 
-   /* --- Check whether the tape is active, i.e. if it is recording and store the status --- */
+   /*--- Check whether the tape is active, i.e. if it is recording and store the status ---*/
 
     TapeActive = AD::globalTape.isActive();
 
 
-    /* --- Stop the recording for the linear solver --- */
+    /*--- Stop the recording for the linear solver ---*/
 
     AD::StopRecording();
 #endif
@@ -712,22 +716,22 @@ unsigned long CSysSolve::Solve(CSysMatrix & Jacobian, CSysVector & LinSysRes, CS
   }
 
 
-  if(TapeActive){
+  if(TapeActive) {
+    /*--- Start recording if it was stopped for the linear solver ---*/
 
-    /* --- Prepare the externally differentiated linear solver --- */
+    AD::StartRecording();
+
+    /*--- Prepare the externally differentiated linear solver ---*/
 
     SetExternalSolve(Jacobian, LinSysRes, LinSysSol, geometry, config);
 
-    /* --- Start recording if it was stopped for the linear solver --- */
-
-    AD::StartRecording();
   }
 
   return IterLinSol;
   
 }
 
-void CSysSolve::SetExternalSolve(CSysMatrix & Jacobian, CSysVector & LinSysRes, CSysVector & LinSysSol, CGeometry *geometry, CConfig *config){
+void CSysSolve::SetExternalSolve(CSysMatrix & Jacobian, CSysVector & LinSysRes, CSysVector & LinSysSol, CGeometry *geometry, CConfig *config) {
 
 #ifdef CODI_REVERSE_TYPE
   
@@ -739,14 +743,14 @@ void CSysSolve::SetExternalSolve(CSysMatrix & Jacobian, CSysVector & LinSysRes, 
   /*--- Arrays to store the indices of the input/output of the linear solver.
      * Note: They will be deleted in the CSysSolve_b::Delete_b routine. ---*/
 
-  int *LinSysRes_Indices = new int[size];
-  int *LinSysSol_Indices = new int[size];
+  su2double::GradientData *LinSysRes_Indices = new su2double::GradientData[size];
+  su2double::GradientData *LinSysSol_Indices = new su2double::GradientData[size];
 
-  for (i = 0; i < size; i++){
+  for (i = 0; i < size; i++) {
 
     /*--- Register the solution of the linear system (could already be registered when using multigrid) ---*/
 
-    if (LinSysSol[i].getGradientData() == 0){
+    if (!LinSysSol[i].isActive()) {
       AD::globalTape.registerInput(LinSysSol[i]);
     }
 
@@ -756,7 +760,7 @@ void CSysSolve::SetExternalSolve(CSysMatrix & Jacobian, CSysVector & LinSysRes, 
     LinSysSol_Indices[i] = LinSysSol[i].getGradientData();
   }
 
-  /*--- Push the data to the checkpoint handler for access in the reverse sweep --- */
+  /*--- Push the data to the checkpoint handler for access in the reverse sweep ---*/
 
   AD::CheckpointHandler* dataHandler = new AD::CheckpointHandler;
 
@@ -770,9 +774,9 @@ void CSysSolve::SetExternalSolve(CSysMatrix & Jacobian, CSysVector & LinSysRes, 
   dataHandler->addData(geometry);
   dataHandler->addData(config);
 
-  /* --- Build preconditioner for the transposed Jacobian ---*/
+  /*--- Build preconditioner for the transposed Jacobian ---*/
 
-  switch(config->GetKind_DiscAdj_Linear_Prec()){
+  switch(config->GetKind_DiscAdj_Linear_Prec()) {
     case ILU:
       Jacobian.BuildILUPreconditioner(true);
       break;
@@ -784,7 +788,7 @@ void CSysSolve::SetExternalSolve(CSysMatrix & Jacobian, CSysVector & LinSysRes, 
       exit(EXIT_FAILURE);
   }
 
-  /* --- Push the external function to the AD tape --- */
+  /*--- Push the external function to the AD tape ---*/
 
   AD::globalTape.pushExternalFunction(&CSysSolve_b::Solve_b, dataHandler, &CSysSolve_b::Delete_b);
 

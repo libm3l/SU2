@@ -2,7 +2,7 @@
  * \file linear_solvers_structure_b.cpp
  * \brief Routines for the linear solver used in the reverse sweep of AD.
  * \author T. Albring
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  *
  * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -12,6 +12,10 @@
  *                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
  *                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
  *                 Prof. Rafael Palacios' group at Imperial College London.
+ *                 Prof. Edwin van der Weide's group at the University of Twente.
+ *                 Prof. Vincent Terrapon's group at the University of Liege.
+ *
+ * Copyright (C) 2012-2016 SU2, the open-source CFD code.
  *
  * SU2 is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -31,12 +35,13 @@
 #include "../include/linear_solvers_structure.hpp"
 #include "../include/vector_structure.hpp"
 #include "../include/matrix_structure.hpp"
-#ifdef CODI_REVERSE_TYPE
-void CSysSolve_b::Solve_b(AD::CheckpointHandler* data){
-  /* --- Extract data from the checkpoint handler --- */
 
-  int *LinSysRes_Indices;
-  int *LinSysSol_Indices;
+#ifdef CODI_REVERSE_TYPE
+void CSysSolve_b::Solve_b(AD::CheckpointHandler* data) {
+  /*--- Extract data from the checkpoint handler ---*/
+
+  su2double::GradientData *LinSysRes_Indices;
+  su2double::GradientData *LinSysSol_Indices;
 
   data->getData(LinSysRes_Indices);
   data->getData(LinSysSol_Indices);
@@ -64,19 +69,19 @@ void CSysSolve_b::Solve_b(AD::CheckpointHandler* data){
   unsigned long MaxIter = config->GetLinear_Solver_Iter();
   su2double SolverTol = config->GetLinear_Solver_Error();
 
-  /* --- Initialize the right-hand side with the gradient of the solution of the primal linear system --- */
+  /*--- Initialize the right-hand side with the gradient of the solution of the primal linear system ---*/
 
-  for (i = 0; i < size; i ++){
-    int& index = LinSysSol_Indices[i];
+  for (i = 0; i < size; i ++) {
+    su2double::GradientData& index = LinSysSol_Indices[i];
     LinSysRes_b[i] = AD::globalTape.getGradient(index);
     LinSysSol_b[i] = 0.0;
     AD::globalTape.gradient(index) = 0.0;
   }
-  /* --- Set up preconditioner and matrix-vector product --- */
+  /*--- Set up preconditioner and matrix-vector product ---*/
 
   CPreconditioner* precond  = NULL;
 
-  switch(config->GetKind_DiscAdj_Linear_Prec()){
+  switch(config->GetKind_DiscAdj_Linear_Prec()) {
     case ILU:
       precond = new CILUPreconditioner(*Jacobian, geometry, config);
       break;
@@ -89,9 +94,9 @@ void CSysSolve_b::Solve_b(AD::CheckpointHandler* data){
 
   CSysSolve *solver = new CSysSolve;
 
-  /* --- Solve the system --- */
+  /*--- Solve the system ---*/
 
-  switch(config->GetKind_DiscAdj_Linear_Solver()){
+  switch(config->GetKind_DiscAdj_Linear_Solver()) {
     case FGMRES:
       solver->FGMRES_LinSolver(LinSysRes_b, LinSysSol_b, *mat_vec, *precond, SolverTol , MaxIter, &Residual, false);
       break;
@@ -101,10 +106,10 @@ void CSysSolve_b::Solve_b(AD::CheckpointHandler* data){
   }
 
 
-  /* --- Update the gradients of the right-hand side of the primal linear system --- */
+  /*--- Update the gradients of the right-hand side of the primal linear system ---*/
 
-  for (i = 0; i < size; i ++){
-    int& index = LinSysRes_Indices[i];
+  for (i = 0; i < size; i ++) {
+    su2double::GradientData& index = LinSysRes_Indices[i];
     AD::globalTape.gradient(index) += SU2_TYPE::GetValue(LinSysSol_b[i]);
   }
 
@@ -114,10 +119,10 @@ void CSysSolve_b::Solve_b(AD::CheckpointHandler* data){
 }
 
 
-void CSysSolve_b::Delete_b(AD::CheckpointHandler* data){
+void CSysSolve_b::Delete_b(AD::CheckpointHandler* data) {
 
-  int *LinSysRes_Indices;
-  int *LinSysSol_Indices;
+  su2double::GradientData *LinSysRes_Indices;
+  su2double::GradientData *LinSysSol_Indices;
 
   data->getData(LinSysRes_Indices);
   data->getData(LinSysSol_Indices);

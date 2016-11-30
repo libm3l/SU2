@@ -2,7 +2,7 @@
  * \file output_paraview.cpp
  * \brief Main subroutines for output solver information
  * \author F. Palacios, T. Economon
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  *
  * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -12,8 +12,10 @@
  *                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
  *                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
  *                 Prof. Rafael Palacios' group at Imperial College London.
+ *                 Prof. Edwin van der Weide's group at the University of Twente.
+ *                 Prof. Vincent Terrapon's group at the University of Liege.
  *
- * Copyright (C) 2012-2015 SU2, the open-source CFD code.
+ * Copyright (C) 2012-2016 SU2, the open-source CFD code.
  *
  * SU2 is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -33,7 +35,6 @@
 
 void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned short val_iZone, unsigned short val_nZone, bool surf_sol) {
     
-	/*--- Local variables and initialization ---*/
 	unsigned short iDim, iVar, nDim = geometry->GetnDim();
 	unsigned short Kind_Solver = config->GetKind_Solver();
     
@@ -46,12 +47,12 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
   unsigned long nGlobal_Elem_Storage;
   
 	bool grid_movement  = config->GetGrid_Movement();
-	bool adjoint = config->GetAdjoint();
+	bool adjoint = config->GetContinuous_Adjoint();
   bool disc_adj = config->GetDiscrete_Adjoint();
   bool fem = (config->GetKind_Solver() == FEM_ELASTICITY);
 
 	char cstr[200], buffer[50];
-	string filename;
+  string filename, fieldname;
     
 	/*--- Write file name with extension ---*/
   if (surf_sol) {
@@ -67,7 +68,7 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
       filename = config->GetFlow_FileName();
   }
   
-	if ((Kind_Solver == LINEAR_ELASTICITY) || (Kind_Solver == FEM_ELASTICITY)) {
+	if (Kind_Solver == FEM_ELASTICITY) {
 		if (surf_sol)
 			filename = config->GetSurfStructure_FileName().c_str();
 		else
@@ -83,24 +84,34 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
   if (Kind_Solver == HEAT_EQUATION)
 		filename = config->GetHeat_FileName().c_str();
   
+  if (config->GetKind_SU2() == SU2_DOT) {
+    if (surf_sol)
+      filename = config->GetSurfSens_FileName();
+    else
+      filename = config->GetVolSens_FileName();
+  }
+
 	strcpy (cstr, filename.c_str());
 	if (Kind_Solver == POISSON_EQUATION) strcpy (cstr, config->GetStructure_FileName().c_str());
     
+
 	/*--- Special cases where a number needs to be appended to the file name. ---*/
-	if ((Kind_Solver == EULER || Kind_Solver == NAVIER_STOKES || Kind_Solver == RANS) &&
-        (val_nZone > 1) && (config->GetUnsteady_Simulation() != TIME_SPECTRAL)) {
+
+	if ((Kind_Solver == EULER || Kind_Solver == NAVIER_STOKES || Kind_Solver == RANS || Kind_Solver == FEM_ELASTICITY) &&
+        (val_nZone > 1) && (config->GetUnsteady_Simulation() != HARMONIC_BALANCE)) {
+
 		SPRINTF (buffer, "_%d", SU2_TYPE::Int(val_iZone));
 		strcat(cstr, buffer);
 	}
     
 	/*--- Special cases where a number needs to be appended to the file name. ---*/
 	if (((Kind_Solver == ADJ_EULER) || (Kind_Solver == ADJ_NAVIER_STOKES) || (Kind_Solver == ADJ_RANS)) &&
-        (val_nZone > 1) && (config->GetUnsteady_Simulation() != TIME_SPECTRAL)) {
+        (val_nZone > 1) && (config->GetUnsteady_Simulation() != HARMONIC_BALANCE)) {
 		SPRINTF (buffer, "_%d", SU2_TYPE::Int(val_iZone));
 		strcat(cstr, buffer);
 	}
     
-	if (config->GetUnsteady_Simulation() == TIME_SPECTRAL) {
+	if (config->GetUnsteady_Simulation() == HARMONIC_BALANCE) {
 		if (SU2_TYPE::Int(val_iZone) < 10) SPRINTF (buffer, "_0000%d.vtk", SU2_TYPE::Int(val_iZone));
 		if ((SU2_TYPE::Int(val_iZone) >= 10) && (SU2_TYPE::Int(val_iZone) < 100)) SPRINTF (buffer, "_000%d.vtk", SU2_TYPE::Int(val_iZone));
 		if ((SU2_TYPE::Int(val_iZone) >= 100) && (SU2_TYPE::Int(val_iZone) < 1000)) SPRINTF (buffer, "_00%d.vtk", SU2_TYPE::Int(val_iZone));
@@ -184,7 +195,7 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
       if (LocalIndex[iPoint+1] != 0) {
         
           /*--- Write the node coordinates ---*/
-          if (config->GetKind_SU2() != SU2_SOL) {
+          if ((config->GetKind_SU2() != SU2_SOL) && (config->GetKind_SU2() != SU2_DOT)) {
             for (iDim = 0; iDim < nDim; iDim++)
               Paraview_File << scientific << Coords[iDim][iPoint] << "\t";
             if (nDim == 2) Paraview_File << scientific << "0.0" << "\t";
@@ -199,7 +210,7 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
       
     } else {
       
-        if (config->GetKind_SU2() != SU2_SOL) {
+        if ((config->GetKind_SU2() != SU2_SOL) && (config->GetKind_SU2() != SU2_DOT)) {
           for (iDim = 0; iDim < nDim; iDim++)
             Paraview_File << scientific << Coords[iDim][iPoint] << "\t";
           if (nDim == 2) Paraview_File << scientific << "0.0" << "\t";
@@ -326,12 +337,14 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
   
   unsigned short VarCounter = 0;
   
-  if (config->GetKind_SU2() == SU2_SOL) {
+  if ((config->GetKind_SU2() == SU2_SOL) || (config->GetKind_SU2() == SU2_DOT)) {
     
     /*--- If SU2_SOL called this routine, we already have a set of output
      variables with the appropriate string tags stored in the config class. ---*/
     for (unsigned short iField = 1; iField < config->fields.size(); iField++) {
       
+      fieldname = config->fields[iField];
+
       bool output_variable = true;
       size_t found = config->fields[iField].find("\"x\"");
       if (found!=string::npos) output_variable = false;
@@ -341,7 +354,9 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
       if (found!=string::npos) output_variable = false;
       
       if (output_variable) {
-        Paraview_File << "\nSCALARS " << config->fields[iField] << " float 1\n";
+        fieldname.erase(remove(fieldname.begin(), fieldname.end(), '"'), fieldname.end());
+
+        Paraview_File << "\nSCALARS " << fieldname << " float 1\n";
         Paraview_File << "LOOKUP_TABLE default\n";
         
         for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
@@ -368,7 +383,7 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
     
     for (iVar = 0; iVar < nVar_Consv; iVar++) {
 
-    	if ((Kind_Solver == LINEAR_ELASTICITY) || (Kind_Solver == FEM_ELASTICITY))
+    	if (Kind_Solver == FEM_ELASTICITY)
     		Paraview_File << "\nSCALARS Displacement_" << iVar+1 << " float 1\n";
     	else
     		Paraview_File << "\nSCALARS Conservative_" << iVar+1 << " float 1\n";
@@ -593,7 +608,7 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
       }
       VarCounter++;
       
-      Paraview_File << "\nSCALARS Skin_Friction_Coefficient float 1\n";
+      Paraview_File << "\nSCALARS Skin_Friction_Coefficient_X float 1\n";
       Paraview_File << "LOOKUP_TABLE default\n";
       
       for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
@@ -608,6 +623,42 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
         }
       }
       VarCounter++;
+      
+      Paraview_File << "\nSCALARS Skin_Friction_Coefficient_Y float 1\n";
+      Paraview_File << "LOOKUP_TABLE default\n";
+      
+      for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
+        if (surf_sol) {
+          if (LocalIndex[iPoint+1] != 0) {
+            /*--- Loop over the vars/residuals and write the values to file ---*/
+            Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
+          }
+        } else {
+          /*--- Loop over the vars/residuals and write the values to file ---*/
+          Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
+        }
+      }
+      VarCounter++;
+      
+      if (nDim == 3) {
+        
+        Paraview_File << "\nSCALARS Skin_Friction_Coefficient_Z float 1\n";
+        Paraview_File << "LOOKUP_TABLE default\n";
+        
+        for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
+          if (surf_sol) {
+            if (LocalIndex[iPoint+1] != 0) {
+              /*--- Loop over the vars/residuals and write the values to file ---*/
+              Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
+            }
+          } else {
+            /*--- Loop over the vars/residuals and write the values to file ---*/
+            Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
+          }
+        }
+        VarCounter++;
+        
+      }
       
       Paraview_File << "\nSCALARS Heat_Flux float 1\n";
       Paraview_File << "LOOKUP_TABLE default\n";
@@ -711,7 +762,7 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
       }
       VarCounter++;
 
-      if (nDim == 3){
+      if (nDim == 3) {
         Paraview_File << "\nSCALARS Sensitivity_z float 1\n";
         Paraview_File << "LOOKUP_TABLE default\n";
 
@@ -723,91 +774,6 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
         VarCounter++;
       }
     }
-
-    if (Kind_Solver == LINEAR_ELASTICITY) {
-
-       Paraview_File << "\nSCALARS Sxx float 1\n";
-       Paraview_File << "LOOKUP_TABLE default\n";
-
-       for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
-          if (! surf_sol) {
-        	  Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-          }
-        }
-      VarCounter++;
-
-      Paraview_File << "\nSCALARS Syy float 1\n";
-      Paraview_File << "LOOKUP_TABLE default\n";
-
-      for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
-         if (! surf_sol) {
-       	  Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-         }
-       }
-     VarCounter++;
-
-     Paraview_File << "\nSCALARS Sxy float 1\n";
-     Paraview_File << "LOOKUP_TABLE default\n";
-
-     for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
-        if (! surf_sol) {
-      	  Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-        }
-      }
-    VarCounter++;
-
-    if (nDim == 3){
-
-			Paraview_File << "\nSCALARS Szz float 1\n";
-			Paraview_File << "LOOKUP_TABLE default\n";
-
-			for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
-			   if (! surf_sol) {
-				  Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-			   }
-			 }
-		   VarCounter++;
-
-		   Paraview_File << "\nSCALARS Sxz float 1\n";
-		   Paraview_File << "LOOKUP_TABLE default\n";
-
-		   for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
-			  if (! surf_sol) {
-				  Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-			  }
-			}
-		  VarCounter++;
-
-		  Paraview_File << "\nSCALARS Syz float 1\n";
-		  Paraview_File << "LOOKUP_TABLE default\n";
-
-		  for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
-			 if (! surf_sol) {
-			  Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-			 }
-		   }
-		 VarCounter++;
-
-    }
-
-      Paraview_File << "\nSCALARS Von_Mises_Stress float 1\n";
-      Paraview_File << "LOOKUP_TABLE default\n";
-
-      for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
-        if (surf_sol) {
-          if (LocalIndex[iPoint+1] != 0) {
-            /*--- Loop over the vars/residuals and write the values to file ---*/
-            Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-          }
-        } else {
-          /*--- Loop over the vars/residuals and write the values to file ---*/
-          Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-        }
-      }
-      VarCounter++;
-
-    }
-
 
     if (Kind_Solver == FEM_ELASTICITY) {
 
@@ -833,7 +799,7 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
            }
          VarCounter++;
 
-         if (nDim == 3){
+         if (nDim == 3) {
 
      			Paraview_File << "\nSCALARS Velocity_3 float 1\n";
      			Paraview_File << "LOOKUP_TABLE default\n";
@@ -866,7 +832,7 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
            }
          VarCounter++;
 
-         if (nDim == 3){
+         if (nDim == 3) {
 
    			Paraview_File << "\nSCALARS Acceleration_3 float 1\n";
    			Paraview_File << "LOOKUP_TABLE default\n";
@@ -911,7 +877,7 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
       }
     VarCounter++;
 
-    if (nDim == 3){
+    if (nDim == 3) {
 
 			Paraview_File << "\nSCALARS Szz float 1\n";
 			Paraview_File << "LOOKUP_TABLE default\n";
@@ -973,7 +939,6 @@ void COutput::SetParaview_ASCII(CConfig *config, CGeometry *geometry, unsigned s
 
 void COutput::SetParaview_MeshASCII(CConfig *config, CGeometry *geometry, unsigned short val_iZone, unsigned short val_nZone, bool surf_sol, bool new_file) {
   
-	/*--- Local variables and initialization ---*/
 	unsigned short iDim, iVar, nDim = geometry->GetnDim();
 	unsigned short Kind_Solver = config->GetKind_Solver();
   
@@ -986,11 +951,11 @@ void COutput::SetParaview_MeshASCII(CConfig *config, CGeometry *geometry, unsign
   unsigned long nGlobal_Elem_Storage;
   
 	bool grid_movement  = config->GetGrid_Movement();
-	bool adjoint = config->GetAdjoint();
+	bool adjoint = config->GetContinuous_Adjoint();
 	bool fem = (config->GetKind_Solver() == FEM_ELASTICITY);
   
 	char cstr[200], buffer[50];
-	string filename;
+  string filename, fieldname;
   
 	/*--- Write file name with extension ---*/
   if (surf_sol) {
@@ -1005,18 +970,18 @@ void COutput::SetParaview_MeshASCII(CConfig *config, CGeometry *geometry, unsign
     else
       filename = config->GetFlow_FileName();
   }
-  if (config->GetKind_SU2()==SU2_DEF){
-    if (new_file){
+  if (config->GetKind_SU2()==SU2_DEF) {
+    if (new_file) {
       if (surf_sol) filename = "surface_grid";
       else filename = "volumetric_grid";
     }
-    else{
+    else {
       if (surf_sol) filename = "surface_deformed_grid";
       else filename = "volumetric_deformed_grid";
     }
   }
   
-	if ((Kind_Solver == LINEAR_ELASTICITY) || (Kind_Solver == FEM_ELASTICITY)){
+	if (Kind_Solver == FEM_ELASTICITY) {
 		if (surf_sol)
 			filename = config->GetSurfStructure_FileName().c_str();
 		else
@@ -1036,20 +1001,20 @@ void COutput::SetParaview_MeshASCII(CConfig *config, CGeometry *geometry, unsign
 	if (Kind_Solver == POISSON_EQUATION) strcpy (cstr, config->GetStructure_FileName().c_str());
   
 	/*--- Special cases where a number needs to be appended to the file name. ---*/
-	if ((Kind_Solver == EULER || Kind_Solver == NAVIER_STOKES || Kind_Solver == RANS) &&
-      (val_nZone > 1) && (config->GetUnsteady_Simulation() != TIME_SPECTRAL)) {
+	if ((Kind_Solver == EULER || Kind_Solver == NAVIER_STOKES || Kind_Solver == RANS || Kind_Solver == FEM_ELASTICITY) &&
+      (val_nZone > 1) && (config->GetUnsteady_Simulation() != HARMONIC_BALANCE)) {
 		SPRINTF (buffer, "_%d", SU2_TYPE::Int(val_iZone));
 		strcat(cstr, buffer);
 	}
   
 	/*--- Special cases where a number needs to be appended to the file name. ---*/
 	if (((Kind_Solver == ADJ_EULER) || (Kind_Solver == ADJ_NAVIER_STOKES) || (Kind_Solver == ADJ_RANS)) &&
-      (val_nZone > 1) && (config->GetUnsteady_Simulation() != TIME_SPECTRAL)) {
+      (val_nZone > 1) && (config->GetUnsteady_Simulation() != HARMONIC_BALANCE)) {
 		SPRINTF (buffer, "_%d", SU2_TYPE::Int(val_iZone));
 		strcat(cstr, buffer);
 	}
   
-	if (config->GetUnsteady_Simulation() == TIME_SPECTRAL) {
+	if (config->GetUnsteady_Simulation() == HARMONIC_BALANCE) {
 		if (SU2_TYPE::Int(val_iZone) < 10) SPRINTF (buffer, "_0000%d.vtk", SU2_TYPE::Int(val_iZone));
 		if ((SU2_TYPE::Int(val_iZone) >= 10) && (SU2_TYPE::Int(val_iZone) < 100)) SPRINTF (buffer, "_000%d.vtk", SU2_TYPE::Int(val_iZone));
 		if ((SU2_TYPE::Int(val_iZone) >= 100) && (SU2_TYPE::Int(val_iZone) < 1000)) SPRINTF (buffer, "_00%d.vtk", SU2_TYPE::Int(val_iZone));
@@ -1285,6 +1250,8 @@ void COutput::SetParaview_MeshASCII(CConfig *config, CGeometry *geometry, unsign
      variables with the appropriate string tags stored in the config class. ---*/
     for (unsigned short iField = 1; iField < config->fields.size(); iField++) {
       
+      fieldname = config->fields[iField];
+      
       bool output_variable = true;
       size_t found = config->fields[iField].find("\"x\"");
       if (found!=string::npos) output_variable = false;
@@ -1294,7 +1261,9 @@ void COutput::SetParaview_MeshASCII(CConfig *config, CGeometry *geometry, unsign
       if (found!=string::npos) output_variable = false;
       
       if (output_variable) {
-        Paraview_File << "\nSCALARS " << config->fields[iField] << " float 1\n";
+        fieldname.erase(remove(fieldname.begin(), fieldname.end(), '"'), fieldname.end());
+
+        Paraview_File << "\nSCALARS " << fieldname << " float 1\n";
         Paraview_File << "LOOKUP_TABLE default\n";
         
         for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
@@ -1317,11 +1286,11 @@ void COutput::SetParaview_MeshASCII(CConfig *config, CGeometry *geometry, unsign
     
   }
   
-  else if (config->GetKind_SU2()!=SU2_DEF){
+  else if (config->GetKind_SU2()!=SU2_DEF) {
     
     for (iVar = 0; iVar < nVar_Consv; iVar++) {
 
-    	if ((Kind_Solver == LINEAR_ELASTICITY) || (Kind_Solver == FEM_ELASTICITY))
+    	if (Kind_Solver == FEM_ELASTICITY)
     		Paraview_File << "\nSCALARS Displacement_" << iVar+1 << " float 1\n";
     	else
     		Paraview_File << "\nSCALARS Conservative_" << iVar+1 << " float 1\n";
@@ -1637,92 +1606,6 @@ void COutput::SetParaview_MeshASCII(CConfig *config, CGeometry *geometry, unsign
       VarCounter++;
       
     }
-    
-
-    if (Kind_Solver == LINEAR_ELASTICITY) {
-
-       Paraview_File << "\nSCALARS Sxx float 1\n";
-       Paraview_File << "LOOKUP_TABLE default\n";
-
-       for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
-          if (! surf_sol) {
-        	  Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-          }
-        }
-      VarCounter++;
-
-      Paraview_File << "\nSCALARS Syy float 1\n";
-      Paraview_File << "LOOKUP_TABLE default\n";
-
-      for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
-         if (! surf_sol) {
-       	  Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-         }
-       }
-     VarCounter++;
-
-     Paraview_File << "\nSCALARS Sxy float 1\n";
-     Paraview_File << "LOOKUP_TABLE default\n";
-
-     for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
-        if (! surf_sol) {
-      	  Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-        }
-      }
-    VarCounter++;
-
-    if (nDim == 3){
-
-			Paraview_File << "\nSCALARS Szz float 1\n";
-			Paraview_File << "LOOKUP_TABLE default\n";
-
-			for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
-			   if (! surf_sol) {
-				  Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-			   }
-			 }
-		   VarCounter++;
-
-		   Paraview_File << "\nSCALARS Sxz float 1\n";
-		   Paraview_File << "LOOKUP_TABLE default\n";
-
-		   for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
-			  if (! surf_sol) {
-				  Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-			  }
-			}
-		  VarCounter++;
-
-		  Paraview_File << "\nSCALARS Syz float 1\n";
-		  Paraview_File << "LOOKUP_TABLE default\n";
-
-		  for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
-			 if (! surf_sol) {
-			  Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-			 }
-		   }
-		 VarCounter++;
-
-    }
-
-      Paraview_File << "\nSCALARS Von_Mises_Stress float 1\n";
-      Paraview_File << "LOOKUP_TABLE default\n";
-
-      for (iPoint = 0; iPoint < nGlobal_Poin; iPoint++) {
-        if (surf_sol) {
-          if (LocalIndex[iPoint+1] != 0) {
-            /*--- Loop over the vars/residuals and write the values to file ---*/
-            Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-          }
-        } else {
-          /*--- Loop over the vars/residuals and write the values to file ---*/
-          Paraview_File << scientific << Data[VarCounter][iPoint] << "\t";
-        }
-      }
-      VarCounter++;
-
-    }
-
 
     if (Kind_Solver == FEM_ELASTICITY) {
 
@@ -1748,7 +1631,7 @@ void COutput::SetParaview_MeshASCII(CConfig *config, CGeometry *geometry, unsign
             }
           VarCounter++;
 
-          if (nDim == 3){
+          if (nDim == 3) {
 
       			Paraview_File << "\nSCALARS Velocity_3 float 1\n";
       			Paraview_File << "LOOKUP_TABLE default\n";
@@ -1781,7 +1664,7 @@ void COutput::SetParaview_MeshASCII(CConfig *config, CGeometry *geometry, unsign
             }
           VarCounter++;
 
-          if (nDim == 3){
+          if (nDim == 3) {
 
     			Paraview_File << "\nSCALARS Acceleration_3 float 1\n";
     			Paraview_File << "LOOKUP_TABLE default\n";
@@ -1826,7 +1709,7 @@ void COutput::SetParaview_MeshASCII(CConfig *config, CGeometry *geometry, unsign
        }
      VarCounter++;
 
-     if (nDim == 3){
+     if (nDim == 3) {
 
  			Paraview_File << "\nSCALARS Szz float 1\n";
  			Paraview_File << "LOOKUP_TABLE default\n";
@@ -1884,6 +1767,6 @@ void COutput::SetParaview_MeshASCII(CConfig *config, CGeometry *geometry, unsign
 	Paraview_File.close();
   
   if (surf_sol)  delete [] LocalIndex;
-  if (SurfacePoint!=NULL) delete [] SurfacePoint;
+  if (SurfacePoint != NULL) delete [] SurfacePoint;
   
 }

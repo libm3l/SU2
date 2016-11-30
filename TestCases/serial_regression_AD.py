@@ -3,7 +3,7 @@
 ## \file serial_regression.py
 #  \brief Python script for automated regression testing of SU2 examples
 #  \author A. Aranake, A. Campos, T. Economon, T. Lukaczyk, S. Padron
-#  \version 4.0.1 "Cardinal"
+#  \version 4.3.0 "Cardinal"
 #
 # SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
 #                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -13,8 +13,10 @@
 #                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
 #                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
 #                 Prof. Rafael Palacios' group at Imperial College London.
+#                 Prof. Edwin van der Weide's group at the University of Twente.
+#                 Prof. Vincent Terrapon's group at the University of Liege.
 #
-# Copyright (C) 2012-2015 SU2, the open-source CFD code.
+# Copyright (C) 2012-2016 SU2, the open-source CFD code.
 #
 # SU2 is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -48,7 +50,7 @@ def main():
     discadj_naca0012.cfg_dir   = "cont_adj_euler/naca0012"
     discadj_naca0012.cfg_file  = "inv_NACA0012_discadj.cfg"
     discadj_naca0012.test_iter = 100
-    discadj_naca0012.test_vals = [-3.606839,-9.035212,1.5060e-02,0.0000e+00] #last 4 columns
+    discadj_naca0012.test_vals = [-3.606839, -9.035212, -0.000000, 0.005688] #last 4 columns
     discadj_naca0012.su2_exec  = "SU2_CFD_AD"
     discadj_naca0012.timeout   = 1600
     discadj_naca0012.tol       = 0.00001
@@ -63,7 +65,7 @@ def main():
     discadj_rans_naca0012_sa.cfg_dir   = "disc_adj_rans/naca0012"
     discadj_rans_naca0012_sa.cfg_file  = "turb_NACA0012_sa.cfg"
     discadj_rans_naca0012_sa.test_iter = 10
-    discadj_rans_naca0012_sa.test_vals = [-1.751947,0.485758,6.0497e+00,0.0000e+00] #last 4 columns
+    discadj_rans_naca0012_sa.test_vals = [-1.751947, 0.485758, 0.181440, -0.000017] #last 4 columns
     discadj_rans_naca0012_sa.su2_exec  = "SU2_CFD_AD"
     discadj_rans_naca0012_sa.timeout   = 1600
     discadj_rans_naca0012_sa.tol       = 0.00001
@@ -74,11 +76,27 @@ def main():
     discadj_rans_naca0012_sst.cfg_dir   = "disc_adj_rans/naca0012"
     discadj_rans_naca0012_sst.cfg_file  = "turb_NACA0012_sst.cfg"
     discadj_rans_naca0012_sst.test_iter = 10
-    discadj_rans_naca0012_sst.test_vals = [ -1.658566,-0.487694,5.0409e+00,0.0000e+00] #last 4 columns
+    discadj_rans_naca0012_sst.test_vals = [-1.658566, -0.487694, 0.087556, 0.000023] #last 4 columns
     discadj_rans_naca0012_sst.su2_exec  = "SU2_CFD_AD"
     discadj_rans_naca0012_sst.timeout   = 1600
     discadj_rans_naca0012_sst.tol       = 0.00001
     test_list.append(discadj_rans_naca0012_sst)
+
+    #######################################################
+    ### Unsteady Disc. adj. compressible RANS           ###
+    #######################################################
+   
+    # Turbulent Cylinder
+    discadj_cylinder           = TestCase('unsteady_cylinder')
+    discadj_cylinder.cfg_dir   = "disc_adj_rans/cylinder"
+    discadj_cylinder.cfg_file  = "cylinder.cfg" 
+    discadj_cylinder.test_iter = 10
+    discadj_cylinder.test_vals = [3.522068, -1.787841, -0.012030, 0.000017] #last 4 columns
+    discadj_cylinder.su2_exec  = "SU2_CFD_AD"
+    discadj_cylinder.timeout   = 1600
+    discadj_cylinder.tol       = 0.00001
+    discadj_cylinder.unsteady  = True
+    test_list.append(discadj_cylinder)
 
     ######################################
     ### RUN TESTS                      ###
@@ -86,6 +104,46 @@ def main():
 
     pass_list = [ test.run_test() for test in test_list ]
     
+    ######################################
+    ### RUN PYTHON TESTS               ###
+    ######################################
+    
+    # test discrete_adjoint.py
+    discadj_euler_py = TestCase('discadj_euler_py')
+    discadj_euler_py.cfg_dir = "cont_adj_euler/naca0012"
+    discadj_euler_py.cfg_file  = "inv_NACA0012.cfg"
+    discadj_euler_py.test_iter = 10
+    discadj_euler_py.su2_exec  = "discrete_adjoint.py"
+    discadj_euler_py.timeout   = 1600
+    discadj_euler_py.reference_file = "of_grad_cd_disc.dat.ref"
+    discadj_euler_py.test_file = "of_grad_cd.dat"
+    pass_list.append(discadj_euler_py.run_filediff())
+    test_list.append(discadj_euler_py)
+    
+    # test direct_differentiation.py
+    directdiff_euler_py = TestCase('directdiff_euler_py')
+    directdiff_euler_py.cfg_dir = "cont_adj_euler/naca0012"
+    directdiff_euler_py.cfg_file  = "inv_NACA0012_FD.cfg"
+    directdiff_euler_py.test_iter = 10
+    directdiff_euler_py.su2_exec  = "direct_differentiation.py"
+    directdiff_euler_py.timeout   = 1600
+    directdiff_euler_py.reference_file = "of_grad_directdiff.dat.ref"
+    directdiff_euler_py.test_file = "DIRECTDIFF/of_grad_directdiff.dat"
+    pass_list.append(directdiff_euler_py.run_filediff())
+    test_list.append(directdiff_euler_py)
+
+    # test continuous_adjoint.py, with multiple objectives
+    discadj_multi_py            = TestCase('discadj_multi_py')
+    discadj_multi_py.cfg_dir    = "cont_adj_euler/wedge"
+    discadj_multi_py.cfg_file   = "inv_wedge_ROE_disc_multiobj.cfg"
+    discadj_multi_py.test_iter  = 10
+    discadj_multi_py.su2_exec   = "discrete_adjoint.py"
+    discadj_multi_py.timeout    = 1600
+    discadj_multi_py.reference_file = "of_grad_combo.dat.refdiscrete"
+    discadj_multi_py.test_file  = "of_grad_combo.dat"
+    pass_list.append(discadj_multi_py.run_filediff())
+    test_list.append(discadj_multi_py)
+
     # Tests summary
     print '=================================================================='
     print 'Summary of the serial tests'

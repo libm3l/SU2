@@ -3,9 +3,9 @@
  * \brief Headers of the mpi interface for generalized datatypes.
  *        The subroutines and functions are in the <i>mpi_structure.cpp</i> file.
  * \author T. Albring
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  *
- * SU2 Lead Developers: Dr. Francisco Palacios (francisco.palacios@boeing.com).
+ * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
  *
  * SU2 Developers: Prof. Juan J. Alonso's group at Stanford University.
@@ -13,8 +13,10 @@
  *                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
  *                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
  *                 Prof. Rafael Palacios' group at Imperial College London.
+ *                 Prof. Edwin van der Weide's group at the University of Twente.
+ *                 Prof. Vincent Terrapon's group at the University of Liege.
  *
- * Copyright (C) 2012-2015 SU2, the open-source CFD code.
+ * Copyright (C) 2012-2016 SU2, the open-source CFD code.
  *
  * SU2 is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -41,8 +43,8 @@
 
 #ifdef HAVE_MPI
 
-/* --- Depending on the datatype used, the correct MPI wrapper class is defined.
- * For the default (double type) case this results in using the normal MPI routines. --- */
+/*--- Depending on the datatype used, the correct MPI wrapper class is defined.
+ * For the default (double type) case this results in using the normal MPI routines. ---*/
 
 #if defined COMPLEX_TYPE  || \
     defined ADOLC_FORWARD_TYPE || \
@@ -62,7 +64,7 @@ typedef CMPIWrapper SU2_MPI;
  * \brief Class for defining the MPI wrapper routines; this class features as a base class for
  * MPI interfaces for non-primitive dataypes e.g. used by AD, complex etc.
  * \author T. Albring
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  */
 
 class CMPIWrapper {
@@ -123,7 +125,7 @@ protected:
  * \brief Class for defining the MPI wrapper routines for the simplest non-primitive data where a
  * auxiliary variable is attached to each primary value.
  * \author T. Albring
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  */
 #if defined COMPLEX_TYPE || \
     defined ADOLC_FORWARD_TYPE || \
@@ -212,7 +214,7 @@ private:
  * \class CAdjointMPIWrapper
  * \brief Adjoint MPI wrapper functions.
  * \author T. Albring
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  */
 
 class CAdjointMPIWrapper: public CMPIWrapper {

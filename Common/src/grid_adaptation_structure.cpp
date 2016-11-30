@@ -2,7 +2,7 @@
  * \file grid_adaptation_structure.cpp
  * \brief Main subroutines for grid adaptation
  * \author F. Palacios
- * \version 4.0.1 "Cardinal"
+ * \version 4.3.0 "Cardinal"
  *
  * SU2 Lead Developers: Dr. Francisco Palacios (Francisco.D.Palacios@boeing.com).
  *                      Dr. Thomas D. Economon (economon@stanford.edu).
@@ -12,8 +12,10 @@
  *                 Prof. Nicolas R. Gauger's group at Kaiserslautern University of Technology.
  *                 Prof. Alberto Guardone's group at Polytechnic University of Milan.
  *                 Prof. Rafael Palacios' group at Imperial College London.
+ *                 Prof. Edwin van der Weide's group at the University of Twente.
+ *                 Prof. Vincent Terrapon's group at the University of Liege.
  *
- * Copyright (C) 2012-2015 SU2, the open-source CFD code.
+ * Copyright (C) 2012-2016 SU2, the open-source CFD code.
  *
  * SU2 is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -196,44 +198,6 @@ void CGridAdaptation::GetFlowResidual(CGeometry *geometry, CConfig *config) {
 	restart_file.close();
 }
 
-void CGridAdaptation::GetLinResidual(CGeometry *geometry, CConfig *config) {
-	unsigned long iPoint, index;
-	su2double dummy;
-	string text_line;
-	
-	string mesh_filename = config->GetSolution_LinFileName();
-	ifstream restart_file;
-	
-	char *cstr = new char [mesh_filename.size()+1];
-	strcpy (cstr, mesh_filename.c_str());
-	restart_file.open(cstr, ios::in);
-	if (restart_file.fail()) {
-		cout << "There is no linear restart file!!" << endl;
-		exit(EXIT_FAILURE); }
-	
-  /*--- Read the header of the file ---*/
-  getline(restart_file, text_line);
-
-	for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++) {
-		getline(restart_file, text_line);
-		istringstream point_line(text_line);
-    
-    point_line >> index;
-    
-    if (nDim == 2) point_line >> dummy >> dummy;
-    else point_line >> dummy >> dummy >> dummy;
-    
-		if (nVar == 1) point_line >> dummy >> LinVar_Res[iPoint][0];
-		if (nVar == 4) point_line >> dummy >> dummy >> dummy >> dummy >>
-			LinVar_Res[iPoint][0] >> LinVar_Res[iPoint][1] >> LinVar_Res[iPoint][2] >> 
-			LinVar_Res[iPoint][3];
-		if (nVar == 5) point_line >> dummy >> dummy >> dummy >> dummy >> dummy >>
-			LinVar_Res[iPoint][0] >> LinVar_Res[iPoint][1] >> LinVar_Res[iPoint][2] >> 
-			LinVar_Res[iPoint][3] >> LinVar_Res[iPoint][4];
-	}
-	
-	restart_file.close();
-}
 
 void CGridAdaptation::GetAdjSolution(CGeometry *geometry, CConfig *config) {
 	unsigned long iPoint, index;
@@ -277,43 +241,6 @@ void CGridAdaptation::GetAdjSolution(CGeometry *geometry, CConfig *config) {
 	restart_file.close();
 }
 
-void CGridAdaptation::GetLinSolution(CGeometry *geometry, CConfig *config) {
-
-	unsigned long iPoint, index;
-  su2double dummy;
-	string text_line;
-	
-	string mesh_filename;
-	mesh_filename = config->GetSolution_LinFileName();
-	
-	ifstream restart_file;
-	
-	char *cstr = new char [mesh_filename.size()+1];
-	strcpy (cstr, mesh_filename.c_str());
-	restart_file.open(cstr, ios::in);
-	if (restart_file.fail()) {
-		cout << "There is no linear restart file!!" << endl;
-		exit(EXIT_FAILURE); }
-	
-  /*--- Read the header of the file ---*/
-  getline(restart_file, text_line);
-  
-	for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++) {
-		getline(restart_file, text_line);
-		istringstream point_line(text_line);
-    
-    point_line >> index;
-    
-    if (nDim == 2) point_line >> dummy >> dummy;
-    else point_line >> dummy >> dummy >> dummy;
-    
-		if (nVar == 1) point_line >> LinVar_Sol[iPoint][0];
-		if (nVar == 4) point_line >> LinVar_Sol[iPoint][0] >> LinVar_Sol[iPoint][1] >> LinVar_Sol[iPoint][2] >> LinVar_Sol[iPoint][3];
-		if (nVar == 5) point_line >> LinVar_Sol[iPoint][0] >> LinVar_Sol[iPoint][1] >> LinVar_Sol[iPoint][2] >> LinVar_Sol[iPoint][3] >> LinVar_Sol[iPoint][4];
-	}
-	
-	restart_file.close();
-}
 
 void CGridAdaptation::GetAdjResidual(CGeometry *geometry, CConfig *config) {
 	unsigned long iPoint, index;
@@ -333,22 +260,29 @@ void CGridAdaptation::GetAdjResidual(CGeometry *geometry, CConfig *config) {
   unsigned short lastindex = copy.find_last_of(".");
   copy = copy.substr(0, lastindex);
 	strcpy (cstr, copy.c_str());
-	if (config->GetKind_ObjFunc() == DRAG_COEFFICIENT)        SPRINTF (buffer, "_cd.dat");
-	if (config->GetKind_ObjFunc() == LIFT_COEFFICIENT)        SPRINTF (buffer, "_cl.dat");
-	if (config->GetKind_ObjFunc() == SIDEFORCE_COEFFICIENT)   SPRINTF (buffer, "_csf.dat");
-	if (config->GetKind_ObjFunc() == INVERSE_DESIGN_PRESSURE) SPRINTF (buffer, "_invpress.dat");
-	if (config->GetKind_ObjFunc() == INVERSE_DESIGN_HEATFLUX) SPRINTF (buffer, "_invheat.dat");
-	if (config->GetKind_ObjFunc() == MOMENT_X_COEFFICIENT)    SPRINTF (buffer, "_cmx.dat");
-	if (config->GetKind_ObjFunc() == MOMENT_Y_COEFFICIENT)    SPRINTF (buffer, "_cmy.dat");
-	if (config->GetKind_ObjFunc() == MOMENT_Z_COEFFICIENT)    SPRINTF (buffer, "_cmz.dat");
-	if (config->GetKind_ObjFunc() == EFFICIENCY)              SPRINTF (buffer, "_eff.dat");
-  if (config->GetKind_ObjFunc() == FORCE_X_COEFFICIENT)     SPRINTF (buffer, "_cfx.dat");
-	if (config->GetKind_ObjFunc() == FORCE_Y_COEFFICIENT)     SPRINTF (buffer, "_cfy.dat");
-	if (config->GetKind_ObjFunc() == FORCE_Z_COEFFICIENT)     SPRINTF (buffer, "_cfz.dat");
-  if (config->GetKind_ObjFunc() == TOTAL_HEATFLUX)          SPRINTF (buffer, "_totheat.dat");
-  if (config->GetKind_ObjFunc() == MAXIMUM_HEATFLUX)        SPRINTF (buffer, "_maxheat.dat");
-  if (config->GetKind_ObjFunc() == AVG_TOTAL_PRESSURE)      SPRINTF (buffer, "_pt.dat");
-	if (config->GetKind_ObjFunc() == MASS_FLOW_RATE)          SPRINTF (buffer, "_mfr.dat");
+	if (config->GetnObj()>1) {
+	  SPRINTF (buffer, "_combo.dat");
+	}
+	else {
+    if (config->GetKind_ObjFunc() == DRAG_COEFFICIENT)        SPRINTF (buffer, "_cd.dat");
+    if (config->GetKind_ObjFunc() == LIFT_COEFFICIENT)        SPRINTF (buffer, "_cl.dat");
+    if (config->GetKind_ObjFunc() == SIDEFORCE_COEFFICIENT)   SPRINTF (buffer, "_csf.dat");
+    if (config->GetKind_ObjFunc() == INVERSE_DESIGN_PRESSURE) SPRINTF (buffer, "_invpress.dat");
+    if (config->GetKind_ObjFunc() == INVERSE_DESIGN_HEATFLUX) SPRINTF (buffer, "_invheat.dat");
+    if (config->GetKind_ObjFunc() == MOMENT_X_COEFFICIENT)    SPRINTF (buffer, "_cmx.dat");
+    if (config->GetKind_ObjFunc() == MOMENT_Y_COEFFICIENT)    SPRINTF (buffer, "_cmy.dat");
+    if (config->GetKind_ObjFunc() == MOMENT_Z_COEFFICIENT)    SPRINTF (buffer, "_cmz.dat");
+    if (config->GetKind_ObjFunc() == EFFICIENCY)              SPRINTF (buffer, "_eff.dat");
+    if (config->GetKind_ObjFunc() == FORCE_X_COEFFICIENT)     SPRINTF (buffer, "_cfx.dat");
+    if (config->GetKind_ObjFunc() == FORCE_Y_COEFFICIENT)     SPRINTF (buffer, "_cfy.dat");
+    if (config->GetKind_ObjFunc() == FORCE_Z_COEFFICIENT)     SPRINTF (buffer, "_cfz.dat");
+    if (config->GetKind_ObjFunc() == TOTAL_HEATFLUX)          SPRINTF (buffer, "_totheat.dat");
+    if (config->GetKind_ObjFunc() == MAXIMUM_HEATFLUX)        SPRINTF (buffer, "_maxheat.dat");
+    if (config->GetKind_ObjFunc() == AVG_TOTAL_PRESSURE)      SPRINTF (buffer, "_pt.dat");
+    if (config->GetKind_ObjFunc() == AVG_OUTLET_PRESSURE)      SPRINTF (buffer, "_pe.dat");
+    if (config->GetKind_ObjFunc() == MASS_FLOW_RATE)          SPRINTF (buffer, "_mfr.dat");
+    if (config->GetKind_ObjFunc() == OUTFLOW_GENERALIZED)       SPRINTF (buffer, "_chn.dat");
+	}
 
 	strcat(cstr, buffer);
 	
@@ -1642,30 +1576,21 @@ void CGridAdaptation::SetHomothetic_Adaptation2D(CGeometry *geometry, CPhysicalG
 	
 	bool Restart_Flow = false;
 	bool Restart_Adjoint = false;
-	bool Restart_Linear = false;
 	
 	if ((config->GetKind_Adaptation() == FULL_FLOW) ||
 			(config->GetKind_Adaptation() == GRAD_FLOW) ||
 			(config->GetKind_Adaptation() == FULL_ADJOINT) ||
 			(config->GetKind_Adaptation() == GRAD_ADJOINT) ||
 			(config->GetKind_Adaptation() == GRAD_FLOW_ADJ) ||
-			(config->GetKind_Adaptation() == FULL_LINEAR) ||
-			(config->GetKind_Adaptation() == ROBUST) ||
 			(config->GetKind_Adaptation() == REMAINING) ||
-			(config->GetKind_Adaptation() == COMPUTABLE_ROBUST) ||
 			(config->GetKind_Adaptation() == COMPUTABLE)) Restart_Flow = true;
 	
 	if ((config->GetKind_Adaptation() == FULL_ADJOINT) ||
 			(config->GetKind_Adaptation() == GRAD_ADJOINT) ||
 			(config->GetKind_Adaptation() == GRAD_FLOW_ADJ) ||
-			(config->GetKind_Adaptation() == ROBUST) ||
 			(config->GetKind_Adaptation() == REMAINING) ||
-			(config->GetKind_Adaptation() == COMPUTABLE_ROBUST) ||
 			(config->GetKind_Adaptation() == COMPUTABLE)) Restart_Adjoint = true;
-	
-	if ((config->GetKind_Adaptation() == COMPUTABLE_ROBUST) ||
-			(config->GetKind_Adaptation() == FULL_LINEAR)) Restart_Linear = true;
-	
+		
 	TriangleAdaptCode = new long[geometry->GetnElem()];
 	TriangleEdgeIndex = new long*[geometry->GetnElem()];
 	TriangleEdgeCode = new bool*[geometry->GetnElem()];
@@ -1837,19 +1762,12 @@ void CGridAdaptation::SetHomothetic_Adaptation2D(CGeometry *geometry, CPhysicalG
 			AdjVar_Adapt[iPoint] = new su2double[nVar];
 	}
 	
-	if (Restart_Linear) {
-		LinVar_Adapt = new su2double *[4*geometry->GetnPoint()];
-		for (iPoint = 0; iPoint < 4*geometry->GetnPoint(); iPoint++)
-			LinVar_Adapt[iPoint] = new su2double[nVar];
-	}
-	
 	/*--- Set the value of the variables ---*/
   
 	for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint ++) {
 		for (iVar = 0; iVar < nVar; iVar ++) {
 			if (Restart_Flow) ConsVar_Adapt[iPoint][iVar] = ConsVar_Sol[iPoint][iVar];
 			if (Restart_Adjoint) AdjVar_Adapt[iPoint][iVar] = AdjVar_Sol[iPoint][iVar];
-			if (Restart_Linear) LinVar_Adapt[iPoint][iVar] = LinVar_Sol[iPoint][iVar];
 		}
 	}
 	
@@ -1882,7 +1800,6 @@ void CGridAdaptation::SetHomothetic_Adaptation2D(CGeometry *geometry, CPhysicalG
 						for (iVar = 0; iVar < nVar; iVar ++) {
 							if (Restart_Flow) ConsVar_Adapt[nPoint_new][iVar] =  0.5 * (ConsVar_Adapt[no_0][iVar]+ConsVar_Adapt[no_1][iVar]);
 							if (Restart_Adjoint) AdjVar_Adapt[nPoint_new][iVar] =  0.5 * (AdjVar_Adapt[no_0][iVar]+AdjVar_Adapt[no_1][iVar]);
-							if (Restart_Linear) LinVar_Adapt[nPoint_new][iVar] =  0.5 * (LinVar_Adapt[no_0][iVar]+LinVar_Adapt[no_1][iVar]);
 						}
 						
 						nPoint_new++;
@@ -1920,7 +1837,6 @@ void CGridAdaptation::SetHomothetic_Adaptation2D(CGeometry *geometry, CPhysicalG
 						for (iVar = 0; iVar < nVar; iVar ++) {
 							if (Restart_Flow) ConsVar_Adapt[nPoint_new][iVar] =  0.5 * (ConsVar_Adapt[no_0][iVar]+ConsVar_Adapt[no_1][iVar]);
 							if (Restart_Adjoint) AdjVar_Adapt[nPoint_new][iVar] =  0.5 * (AdjVar_Adapt[no_0][iVar]+AdjVar_Adapt[no_1][iVar]);
-							if (Restart_Linear) LinVar_Adapt[nPoint_new][iVar] =  0.5 * (LinVar_Adapt[no_0][iVar]+LinVar_Adapt[no_1][iVar]);
 						}
 						
 						nPoint_new++;
@@ -1951,7 +1867,6 @@ void CGridAdaptation::SetHomothetic_Adaptation2D(CGeometry *geometry, CPhysicalG
 						for (iVar = 0; iVar < nVar; iVar ++) {
 							if (Restart_Flow) ConsVar_Adapt[nPoint_new][iVar] =  0.25 * (ConsVar_Adapt[no_0][iVar]+ConsVar_Adapt[no_1][iVar]+ConsVar_Adapt[no_2][iVar]+ConsVar_Adapt[no_3][iVar]);
 							if (Restart_Adjoint) AdjVar_Adapt[nPoint_new][iVar] =  0.25 * (AdjVar_Adapt[no_0][iVar]+AdjVar_Adapt[no_1][iVar]+AdjVar_Adapt[no_2][iVar]+AdjVar_Adapt[no_3][iVar]);
-							if (Restart_Linear) LinVar_Adapt[nPoint_new][iVar] =  0.25 * (LinVar_Adapt[no_0][iVar]+LinVar_Adapt[no_1][iVar]+LinVar_Adapt[no_2][iVar]+LinVar_Adapt[no_3][iVar]);
 						}
 						
 						nPoint_new++;
@@ -2157,7 +2072,7 @@ void CGridAdaptation::SetHomothetic_Adaptation2D(CGeometry *geometry, CPhysicalG
 					/*--- Quadrilateral case ---*/
           
 					if (Division[iPart][0] == 5) {
-						geo_adapt->elem[iElemNew] = new CQuadrilateral(Division[iPart][1], 
+						geo_adapt->elem[iElemNew] = new CQuadrilateral(Division[iPart][1],
 																											 Division[iPart][2], 
 																											 Division[iPart][3], 
 																											 Division[iPart][4], 2);
@@ -2188,7 +2103,7 @@ void CGridAdaptation::SetHomothetic_Adaptation2D(CGeometry *geometry, CPhysicalG
 				
 				RectDivision(RectAdaptCode[iElem], nodes, Division, &nPart);
 				for (long iPart = 0; iPart < nPart; iPart++) {
-					geo_adapt->elem[iElemNew] = new CQuadrilateral(Division[iPart][1], 
+					geo_adapt->elem[iElemNew] = new CQuadrilateral(Division[iPart][1],
 																										 Division[iPart][2], 
 																										 Division[iPart][3], 
 																										 Division[iPart][4], 2);
@@ -2230,7 +2145,7 @@ void CGridAdaptation::SetHomothetic_Adaptation2D(CGeometry *geometry, CPhysicalG
 					/*--- Quadrilateral case ---*/
           
 					if (Division[iPart][0] == 5) {
-						geo_adapt->elem[iElemNew] = new CQuadrilateral(Division[iPart][1], 
+						geo_adapt->elem[iElemNew] = new CQuadrilateral(Division[iPart][1],
 																											 Division[iPart][2], 
 																											 Division[iPart][3], 
 																											 Division[iPart][4], 2);
@@ -2345,30 +2260,21 @@ void CGridAdaptation::SetHomothetic_Adaptation3D(CGeometry *geometry, CPhysicalG
 	
 	bool Restart_Flow = false;
 	bool Restart_Adjoint = false;
-	bool Restart_Linear = false;
 	
 	if ((config->GetKind_Adaptation() == FULL_FLOW) ||
 			(config->GetKind_Adaptation() == GRAD_FLOW) ||
 			(config->GetKind_Adaptation() == FULL_ADJOINT) ||
 			(config->GetKind_Adaptation() == GRAD_ADJOINT) ||
 			(config->GetKind_Adaptation() == GRAD_FLOW_ADJ) ||
-			(config->GetKind_Adaptation() == FULL_LINEAR) ||
-			(config->GetKind_Adaptation() == ROBUST) ||
 			(config->GetKind_Adaptation() == REMAINING) ||
-			(config->GetKind_Adaptation() == COMPUTABLE_ROBUST) ||
 			(config->GetKind_Adaptation() == COMPUTABLE)) Restart_Flow = true;
 	
 	if ((config->GetKind_Adaptation() == FULL_ADJOINT) ||
 			(config->GetKind_Adaptation() == GRAD_ADJOINT) ||
 			(config->GetKind_Adaptation() == GRAD_FLOW_ADJ) ||
-			(config->GetKind_Adaptation() == ROBUST) ||
 			(config->GetKind_Adaptation() == REMAINING) ||
-			(config->GetKind_Adaptation() == COMPUTABLE_ROBUST) ||
 			(config->GetKind_Adaptation() == COMPUTABLE)) Restart_Adjoint = true;
-	
-	if ((config->GetKind_Adaptation() == COMPUTABLE_ROBUST) ||
-			(config->GetKind_Adaptation() == FULL_LINEAR)) Restart_Linear = true;
-	
+		
 	TetraAdaptCode = new long[geometry->GetnElem()];
 	TetraEdgeIndex = new long*[geometry->GetnElem()];
 	TetraEdgeCode = new bool*[geometry->GetnElem()];
@@ -2625,18 +2531,11 @@ void CGridAdaptation::SetHomothetic_Adaptation3D(CGeometry *geometry, CPhysicalG
 			AdjVar_Adapt[iPoint] = new su2double[nVar];
 	}
 	
-	if (Restart_Linear) {
-		LinVar_Adapt = new su2double *[10*geometry->GetnPoint()];
-		for (iPoint = 0; iPoint < 10*geometry->GetnPoint(); iPoint++)
-			LinVar_Adapt[iPoint] = new su2double[nVar];
-	}
-	
 	// Set the value of the variables
 	for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint ++) {
 		for (iVar = 0; iVar < nVar; iVar ++) {
 			if (Restart_Flow) ConsVar_Adapt[iPoint][iVar] = ConsVar_Sol[iPoint][iVar];
 			if (Restart_Adjoint) AdjVar_Adapt[iPoint][iVar] = AdjVar_Sol[iPoint][iVar];
-			if (Restart_Linear) LinVar_Adapt[iPoint][iVar] = LinVar_Sol[iPoint][iVar];
 		}
 	}
 	
@@ -2674,7 +2573,6 @@ void CGridAdaptation::SetHomothetic_Adaptation3D(CGeometry *geometry, CPhysicalG
 						for (iVar = 0; iVar < nVar; iVar ++) {
 							if (Restart_Flow) ConsVar_Adapt[nPoint_new][iVar] =  0.5 * (ConsVar_Adapt[no_0][iVar]+ConsVar_Adapt[no_1][iVar]);
 							if (Restart_Adjoint) AdjVar_Adapt[nPoint_new][iVar] =  0.5 * (AdjVar_Adapt[no_0][iVar]+AdjVar_Adapt[no_1][iVar]);
-							if (Restart_Linear) LinVar_Adapt[nPoint_new][iVar] =  0.5 * (LinVar_Adapt[no_0][iVar]+LinVar_Adapt[no_1][iVar]);
 						}
 						
 						nPoint_new++;
@@ -2725,7 +2623,6 @@ void CGridAdaptation::SetHomothetic_Adaptation3D(CGeometry *geometry, CPhysicalG
 						for (iVar = 0; iVar < nVar; iVar ++) {
 							if (Restart_Flow) ConsVar_Adapt[nPoint_new][iVar] =  0.5 * (ConsVar_Adapt[no_0][iVar]+ConsVar_Adapt[no_1][iVar]);
 							if (Restart_Adjoint) AdjVar_Adapt[nPoint_new][iVar] =  0.5 * (AdjVar_Adapt[no_0][iVar]+AdjVar_Adapt[no_1][iVar]);
-							if (Restart_Linear) LinVar_Adapt[nPoint_new][iVar] =  0.5 * (LinVar_Adapt[no_0][iVar]+LinVar_Adapt[no_1][iVar]);
 						}
 						
 						nPoint_new++;
@@ -2794,8 +2691,6 @@ void CGridAdaptation::SetHomothetic_Adaptation3D(CGeometry *geometry, CPhysicalG
 																																						ConsVar_Adapt[no_4][iVar]+ConsVar_Adapt[no_5][iVar]+ConsVar_Adapt[no_6][iVar]+ConsVar_Adapt[no_7][iVar]);
 							if (Restart_Adjoint) AdjVar_Adapt[nPoint_new][iVar] =  0.125 * (AdjVar_Adapt[no_0][iVar]+AdjVar_Adapt[no_1][iVar]+AdjVar_Adapt[no_2][iVar]+AdjVar_Adapt[no_3][iVar]+
 																																							AdjVar_Adapt[no_4][iVar]+AdjVar_Adapt[no_5][iVar]+AdjVar_Adapt[no_6][iVar]+AdjVar_Adapt[no_7][iVar]);
-							if (Restart_Linear) LinVar_Adapt[nPoint_new][iVar] =  0.125 * (LinVar_Adapt[no_0][iVar]+LinVar_Adapt[no_1][iVar]+LinVar_Adapt[no_2][iVar]+LinVar_Adapt[no_3][iVar]+
-																																						 LinVar_Adapt[no_4][iVar]+LinVar_Adapt[no_5][iVar]+LinVar_Adapt[no_6][iVar]+LinVar_Adapt[no_7][iVar]);
 						}
 						
 						nPoint_new++;
@@ -3299,212 +3194,216 @@ void CGridAdaptation::SetHomothetic_Adaptation3D(CGeometry *geometry, CPhysicalG
 }
 
 void CGridAdaptation::SetIndicator_Flow(CGeometry *geometry, CConfig *config, unsigned short strength) {
-	unsigned long Point = 0, Point_0 = 0, Point_1 = 0, iEdge, iVertex, iPoint, iElem, max_elem_new;
-	unsigned short iDim, iMarker;
-	su2double Dual_Area, norm, Solution_Vertex, Solution_0, Solution_1, Solution_Average, 
-			DualArea, Partial_Res, Grad_Val, *Normal;
-	su2double scale_area = config->GetDualVol_Power();
-
-	/*--- Initialization ---*/
-	nElem_new = 0;
-	max_elem_new = SU2_TYPE::Int(0.01*config->GetNew_Elem_Adapt()*su2double(geometry->GetnElem()));	
-	for (iElem = 0; iElem < geometry->GetnElem(); iElem ++) {
-		geometry->elem[iElem]->SetDivide(false);
-	}
-	
-	/*--- Compute the gradient of the first variable ---*/
-	for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++)
-		for (iDim = 0; iDim < nDim; iDim++)
-			Gradient[iPoint][iDim] = 0.0;
-	
-	for (iEdge = 0; iEdge < geometry->GetnEdge(); iEdge++) {	
-		Point_0 = geometry->edge[iEdge]->GetNode(0); Solution_0 = ConsVar_Sol[Point_0][0];
-		Point_1 = geometry->edge[iEdge]->GetNode(1); Solution_1 = ConsVar_Sol[Point_1][0];
-		Normal = geometry->edge[iEdge]->GetNormal();
-		Solution_Average =  0.5 * ( Solution_0 + Solution_1);
-		for (iDim = 0; iDim < nDim; iDim++) {
-			Partial_Res = Solution_Average*Normal[iDim];
-			Gradient[Point_0][iDim] = Gradient[Point_0][iDim] + Partial_Res;
-			Gradient[Point_1][iDim] = Gradient[Point_1][iDim] - Partial_Res;
-		}				
-	}
+  unsigned long Point = 0, Point_0 = 0, Point_1 = 0, iEdge, iVertex, iPoint, iElem, max_elem_new;
+  unsigned short iDim, iMarker;
+  su2double Dual_Area, norm, Solution_Vertex, Solution_0, Solution_1, Solution_Average,
+  DualArea, Partial_Res, Grad_Val, *Normal;
+  su2double scale_area = config->GetDualVol_Power();
+  
+  /*--- Initialization ---*/
+  nElem_new = 0;
+  max_elem_new = SU2_TYPE::Int(0.01*config->GetNew_Elem_Adapt()*su2double(geometry->GetnElem()));
+  for (iElem = 0; iElem < geometry->GetnElem(); iElem ++) {
+    geometry->elem[iElem]->SetDivide(false);
+  }
+  
+  /*--- Compute the gradient of the first variable ---*/
+  for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++)
+    for (iDim = 0; iDim < nDim; iDim++)
+      Gradient[iPoint][iDim] = 0.0;
+  
+  for (iEdge = 0; iEdge < geometry->GetnEdge(); iEdge++) {
+    Point_0 = geometry->edge[iEdge]->GetNode(0); Solution_0 = ConsVar_Sol[Point_0][0];
+    Point_1 = geometry->edge[iEdge]->GetNode(1); Solution_1 = ConsVar_Sol[Point_1][0];
+    Normal = geometry->edge[iEdge]->GetNormal();
+    Solution_Average =  0.5 * ( Solution_0 + Solution_1);
+    for (iDim = 0; iDim < nDim; iDim++) {
+      Partial_Res = Solution_Average*Normal[iDim];
+      Gradient[Point_0][iDim] = Gradient[Point_0][iDim] + Partial_Res;
+      Gradient[Point_1][iDim] = Gradient[Point_1][iDim] - Partial_Res;
+    }
+  }
 		
-	for (iMarker = 0; iMarker < geometry->GetnMarker(); iMarker++)
-		for (iVertex = 0; iVertex < geometry->GetnVertex(iMarker); iVertex++) {
-			Point = geometry->vertex[iMarker][iVertex]->GetNode();
-			Solution_Vertex = ConsVar_Sol[Point][0];
-			Normal = geometry->vertex[iMarker][iVertex]->GetNormal();
-			for (iDim = 0; iDim < nDim; iDim++) {
-				Partial_Res = Solution_Vertex*Normal[iDim];
-				Gradient[Point][iDim] = Gradient[Point][iDim] - Partial_Res;
-			}
-		}
+  for (iMarker = 0; iMarker < geometry->GetnMarker(); iMarker++)
+    if (config->GetMarker_All_KindBC(iMarker) != INTERNAL_BOUNDARY)
+      for (iVertex = 0; iVertex < geometry->GetnVertex(iMarker); iVertex++) {
+        Point = geometry->vertex[iMarker][iVertex]->GetNode();
+        Solution_Vertex = ConsVar_Sol[Point][0];
+        Normal = geometry->vertex[iMarker][iVertex]->GetNormal();
+        for (iDim = 0; iDim < nDim; iDim++) {
+          Partial_Res = Solution_Vertex*Normal[iDim];
+          Gradient[Point][iDim] = Gradient[Point][iDim] - Partial_Res;
+        }
+      }
 		
-	for (iPoint = 0; iPoint<geometry->GetnPoint(); iPoint++)
-		for (iDim = 0; iDim < nDim; iDim++) {
-			DualArea = geometry->node[iPoint]->GetVolume();
-			Grad_Val = Gradient[iPoint][iDim]/DualArea;
-			Gradient[iPoint][iDim] = Grad_Val;			
-		}
-	
-	/*--- Compute the the adaptation index at each point ---*/
-	for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint ++) {
-		Dual_Area = geometry->node[iPoint]->GetVolume();
-		norm = 0.0;
-		for (iDim = 0; iDim < nDim; iDim++) 
-			norm += Gradient[iPoint][iDim]*Gradient[iPoint][iDim];
-		norm = sqrt(norm); 
-		Index[iPoint] = pow(Dual_Area, scale_area)*norm;
-	}
-	
-	SetSensorElem(geometry, config, max_elem_new);
+  for (iPoint = 0; iPoint<geometry->GetnPoint(); iPoint++)
+    for (iDim = 0; iDim < nDim; iDim++) {
+      DualArea = geometry->node[iPoint]->GetVolume();
+      Grad_Val = Gradient[iPoint][iDim]/DualArea;
+      Gradient[iPoint][iDim] = Grad_Val;
+    }
+  
+  /*--- Compute the the adaptation index at each point ---*/
+  for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint ++) {
+    Dual_Area = geometry->node[iPoint]->GetVolume();
+    norm = 0.0;
+    for (iDim = 0; iDim < nDim; iDim++)
+      norm += Gradient[iPoint][iDim]*Gradient[iPoint][iDim];
+    norm = sqrt(norm);
+    Index[iPoint] = pow(Dual_Area, scale_area)*norm;
+  }
+  
+  SetSensorElem(geometry, config, max_elem_new);
+  
 }
 
 
 void CGridAdaptation::SetIndicator_Adj(CGeometry *geometry, CConfig *config, unsigned short strength) {
-	su2double Dual_Area;
-	unsigned long Point = 0, Point_0 = 0, Point_1 = 0, iEdge, iVertex, iPoint, iElem, max_elem_new;
-	unsigned short iDim, iMarker;
-	su2double norm, Solution_Vertex, Solution_0, Solution_1, Solution_Average, 
-	DualArea, Partial_Res, Grad_Val, *Normal;
-	su2double scale_area = config->GetDualVol_Power();
-	
-	// Initialization
-	nElem_new = 0;
-	max_elem_new = SU2_TYPE::Int(0.01*config->GetNew_Elem_Adapt()*su2double(geometry->GetnElem()));	
-	for (iElem = 0; iElem < geometry->GetnElem(); iElem ++) {
-		geometry->elem[iElem]->SetDivide(false);
-	}
-	
-	
-	// Compute the gradient of the density.
-	for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++)
-		for (iDim = 0; iDim < nDim; iDim++)
-			Gradient[iPoint][iDim] = 0.0;
-	
-	for (iEdge = 0; iEdge < geometry->GetnEdge(); iEdge++) {	
-		Point_0 = geometry->edge[iEdge]->GetNode(0); Solution_0 = AdjVar_Sol[Point_0][0];
-		Point_1 = geometry->edge[iEdge]->GetNode(1); Solution_1 = AdjVar_Sol[Point_1][0];
-		Normal = geometry->edge[iEdge]->GetNormal();
-		Solution_Average =  0.5 * ( Solution_0 + Solution_1);
-		for (iDim = 0; iDim < nDim; iDim++) {
-			Partial_Res = Solution_Average*Normal[iDim];
-			Gradient[Point_0][iDim] = Gradient[Point_0][iDim] + Partial_Res;
-			Gradient[Point_1][iDim] = Gradient[Point_1][iDim] - Partial_Res;
-		}				
-	}
-	
-	for (iMarker = 0; iMarker < geometry->GetnMarker(); iMarker++)
-		for (iVertex = 0; iVertex < geometry->GetnVertex(iMarker); iVertex++) {
-			Point = geometry->vertex[iMarker][iVertex]->GetNode();
-			Solution_Vertex = AdjVar_Sol[Point][0];
-			Normal = geometry->vertex[iMarker][iVertex]->GetNormal();
-			for (iDim = 0; iDim < nDim; iDim++) {
-				Partial_Res = Solution_Vertex*Normal[iDim];
-				Gradient[Point][iDim] = Gradient[Point][iDim] - Partial_Res;
-			}
-		}
-	
-	for (iPoint = 0; iPoint<geometry->GetnPoint(); iPoint++)
-		for (iDim = 0; iDim < nDim; iDim++) {
-			DualArea = geometry->node[iPoint]->GetVolume();
-			Grad_Val = Gradient[iPoint][iDim]/DualArea;
-			Gradient[iPoint][iDim] = Grad_Val;			
-		}
-	
-	
-	// Compute the the adaptation index at each point.
-	for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint ++) {
-		Dual_Area = geometry->node[iPoint]->GetVolume();
-		norm = 0.0;
-		for (iDim = 0; iDim < nDim; iDim++) 
-			norm += Gradient[iPoint][iDim]*Gradient[iPoint][iDim];
-		norm = sqrt(norm); 
-		Index[iPoint] = pow(Dual_Area, scale_area)*norm;
-	}
-	
-	SetSensorElem(geometry, config, max_elem_new);
-	
+  su2double Dual_Area;
+  unsigned long Point = 0, Point_0 = 0, Point_1 = 0, iEdge, iVertex, iPoint, iElem, max_elem_new;
+  unsigned short iDim, iMarker;
+  su2double norm, Solution_Vertex, Solution_0, Solution_1, Solution_Average,
+  DualArea, Partial_Res, Grad_Val, *Normal;
+  su2double scale_area = config->GetDualVol_Power();
+  
+  // Initialization
+  nElem_new = 0;
+  max_elem_new = SU2_TYPE::Int(0.01*config->GetNew_Elem_Adapt()*su2double(geometry->GetnElem()));
+  for (iElem = 0; iElem < geometry->GetnElem(); iElem ++) {
+    geometry->elem[iElem]->SetDivide(false);
+  }
+  
+  
+  // Compute the gradient of the density.
+  for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++)
+    for (iDim = 0; iDim < nDim; iDim++)
+      Gradient[iPoint][iDim] = 0.0;
+  
+  for (iEdge = 0; iEdge < geometry->GetnEdge(); iEdge++) {
+    Point_0 = geometry->edge[iEdge]->GetNode(0); Solution_0 = AdjVar_Sol[Point_0][0];
+    Point_1 = geometry->edge[iEdge]->GetNode(1); Solution_1 = AdjVar_Sol[Point_1][0];
+    Normal = geometry->edge[iEdge]->GetNormal();
+    Solution_Average =  0.5 * ( Solution_0 + Solution_1);
+    for (iDim = 0; iDim < nDim; iDim++) {
+      Partial_Res = Solution_Average*Normal[iDim];
+      Gradient[Point_0][iDim] = Gradient[Point_0][iDim] + Partial_Res;
+      Gradient[Point_1][iDim] = Gradient[Point_1][iDim] - Partial_Res;
+    }
+  }
+  
+  for (iMarker = 0; iMarker < geometry->GetnMarker(); iMarker++)
+    if (config->GetMarker_All_KindBC(iMarker) != INTERNAL_BOUNDARY)
+      for (iVertex = 0; iVertex < geometry->GetnVertex(iMarker); iVertex++) {
+        Point = geometry->vertex[iMarker][iVertex]->GetNode();
+        Solution_Vertex = AdjVar_Sol[Point][0];
+        Normal = geometry->vertex[iMarker][iVertex]->GetNormal();
+        for (iDim = 0; iDim < nDim; iDim++) {
+          Partial_Res = Solution_Vertex*Normal[iDim];
+          Gradient[Point][iDim] = Gradient[Point][iDim] - Partial_Res;
+        }
+      }
+  
+  for (iPoint = 0; iPoint<geometry->GetnPoint(); iPoint++)
+    for (iDim = 0; iDim < nDim; iDim++) {
+      DualArea = geometry->node[iPoint]->GetVolume();
+      Grad_Val = Gradient[iPoint][iDim]/DualArea;
+      Gradient[iPoint][iDim] = Grad_Val;
+    }
+  
+  
+  // Compute the the adaptation index at each point.
+  for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint ++) {
+    Dual_Area = geometry->node[iPoint]->GetVolume();
+    norm = 0.0;
+    for (iDim = 0; iDim < nDim; iDim++)
+      norm += Gradient[iPoint][iDim]*Gradient[iPoint][iDim];
+    norm = sqrt(norm);
+    Index[iPoint] = pow(Dual_Area, scale_area)*norm;
+  }
+  
+  SetSensorElem(geometry, config, max_elem_new);
+  
 }
 
 void CGridAdaptation::SetIndicator_FlowAdj(CGeometry *geometry, CConfig *config) {
-	su2double Dual_Area;
-	unsigned long Point = 0, Point_0 = 0, Point_1 = 0, iEdge, iVertex, iPoint, iElem, max_elem_new_flow, max_elem_new_adj;
-	unsigned short iDim, iMarker;
-	su2double norm, DualArea, Partial_Res, *Normal;
-	su2double scale_area = config->GetDualVol_Power();
-	
-	// Initialization
-	max_elem_new_flow = SU2_TYPE::Int(0.5*0.01*config->GetNew_Elem_Adapt()*su2double(geometry->GetnElem()));
-	max_elem_new_adj =  SU2_TYPE::Int(0.5*0.01*config->GetNew_Elem_Adapt()*su2double(geometry->GetnElem()));
-	for (iElem = 0; iElem < geometry->GetnElem(); iElem ++) {
-		geometry->elem[iElem]->SetDivide(false);
-	}
-	
-	// Compute the gradient of the first variable.
-	for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++)
-		for (iDim = 0; iDim < nDim; iDim++) {
-			Gradient_Flow[iPoint][iDim] = 0.0;
-			Gradient_Adj[iPoint][iDim] = 0.0;
-		}
-
-	for (iEdge = 0; iEdge < geometry->GetnEdge(); iEdge++) {	
-		Point_0 = geometry->edge[iEdge]->GetNode(0);
-		Point_1 = geometry->edge[iEdge]->GetNode(1);
-		Normal = geometry->edge[iEdge]->GetNormal();
-		for (iDim = 0; iDim < nDim; iDim++) {
-			Partial_Res = 0.5 * ( ConsVar_Sol[Point_0][0] + ConsVar_Sol[Point_1][0] ) * Normal[iDim];
-			Gradient_Flow[Point_0][iDim] = Gradient_Flow[Point_0][iDim] + Partial_Res;
-			Gradient_Flow[Point_1][iDim] = Gradient_Flow[Point_1][iDim] - Partial_Res;
-
-			Partial_Res = 0.5 * ( AdjVar_Sol[Point_0][0] + AdjVar_Sol[Point_1][0] ) * Normal[iDim];
-			Gradient_Adj[Point_0][iDim] = Gradient_Adj[Point_0][iDim] + Partial_Res;
-			Gradient_Adj[Point_1][iDim] = Gradient_Adj[Point_1][iDim] - Partial_Res;			
-		}				
-	}
-	
-	for (iMarker = 0; iMarker < geometry->GetnMarker(); iMarker++)
-		for (iVertex = 0; iVertex < geometry->GetnVertex(iMarker); iVertex++) {
-			Point = geometry->vertex[iMarker][iVertex]->GetNode();
-			Normal = geometry->vertex[iMarker][iVertex]->GetNormal();
-			for (iDim = 0; iDim < nDim; iDim++) {
-				Gradient_Flow[Point][iDim] = Gradient_Flow[Point][iDim] - ConsVar_Sol[Point][0] * Normal[iDim];
-				Gradient_Adj[Point][iDim] = Gradient_Adj[Point][iDim] - AdjVar_Sol[Point][0] * Normal[iDim];
-			}
-		}
-	
-	for (iPoint = 0; iPoint<geometry->GetnPoint(); iPoint++)
-		for (iDim = 0; iDim < nDim; iDim++) {
-			DualArea = geometry->node[iPoint]->GetVolume();
-			Gradient_Flow[iPoint][iDim] = Gradient_Flow[iPoint][iDim]/DualArea;
-			Gradient_Adj[iPoint][iDim] = Gradient_Adj[iPoint][iDim]/DualArea;
-		}
-	
-	// Compute the the adaptation index at each point.
-	for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint ++) {
-		Dual_Area=geometry->node[iPoint]->GetVolume();
-		norm = 0.0;
-		for (iDim = 0; iDim < nDim; iDim++) 
-			norm += Gradient_Flow[iPoint][iDim]*Gradient_Flow[iPoint][iDim];
-		norm = sqrt(norm); 
-		Index[iPoint] = pow(Dual_Area, scale_area)*norm;
-	}
-	
-	
-	SetSensorElem(geometry, config, max_elem_new_flow);
-
-	// Compute the the adaptation index at each point.
-	for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint ++) {
-		Dual_Area=geometry->node[iPoint]->GetVolume();
-		norm = 0.0;
-		for (iDim = 0; iDim < nDim; iDim++) 
-			norm += Gradient_Adj[iPoint][iDim]*Gradient_Adj[iPoint][iDim];
-		norm = sqrt(norm); 
-		Index[iPoint] = pow(Dual_Area, scale_area)*norm;
-	}
-	
-	SetSensorElem(geometry, config, max_elem_new_adj);
-
+  su2double Dual_Area;
+  unsigned long Point = 0, Point_0 = 0, Point_1 = 0, iEdge, iVertex, iPoint, iElem, max_elem_new_flow, max_elem_new_adj;
+  unsigned short iDim, iMarker;
+  su2double norm, DualArea, Partial_Res, *Normal;
+  su2double scale_area = config->GetDualVol_Power();
+  
+  // Initialization
+  max_elem_new_flow = SU2_TYPE::Int(0.5*0.01*config->GetNew_Elem_Adapt()*su2double(geometry->GetnElem()));
+  max_elem_new_adj =  SU2_TYPE::Int(0.5*0.01*config->GetNew_Elem_Adapt()*su2double(geometry->GetnElem()));
+  for (iElem = 0; iElem < geometry->GetnElem(); iElem ++) {
+    geometry->elem[iElem]->SetDivide(false);
+  }
+  
+  // Compute the gradient of the first variable.
+  for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++)
+    for (iDim = 0; iDim < nDim; iDim++) {
+      Gradient_Flow[iPoint][iDim] = 0.0;
+      Gradient_Adj[iPoint][iDim] = 0.0;
+    }
+  
+  for (iEdge = 0; iEdge < geometry->GetnEdge(); iEdge++) {
+    Point_0 = geometry->edge[iEdge]->GetNode(0);
+    Point_1 = geometry->edge[iEdge]->GetNode(1);
+    Normal = geometry->edge[iEdge]->GetNormal();
+    for (iDim = 0; iDim < nDim; iDim++) {
+      Partial_Res = 0.5 * ( ConsVar_Sol[Point_0][0] + ConsVar_Sol[Point_1][0] ) * Normal[iDim];
+      Gradient_Flow[Point_0][iDim] = Gradient_Flow[Point_0][iDim] + Partial_Res;
+      Gradient_Flow[Point_1][iDim] = Gradient_Flow[Point_1][iDim] - Partial_Res;
+      
+      Partial_Res = 0.5 * ( AdjVar_Sol[Point_0][0] + AdjVar_Sol[Point_1][0] ) * Normal[iDim];
+      Gradient_Adj[Point_0][iDim] = Gradient_Adj[Point_0][iDim] + Partial_Res;
+      Gradient_Adj[Point_1][iDim] = Gradient_Adj[Point_1][iDim] - Partial_Res;
+    }
+  }
+  
+  for (iMarker = 0; iMarker < geometry->GetnMarker(); iMarker++)
+    if (config->GetMarker_All_KindBC(iMarker) != INTERNAL_BOUNDARY)
+      for (iVertex = 0; iVertex < geometry->GetnVertex(iMarker); iVertex++) {
+        Point = geometry->vertex[iMarker][iVertex]->GetNode();
+        Normal = geometry->vertex[iMarker][iVertex]->GetNormal();
+        for (iDim = 0; iDim < nDim; iDim++) {
+          Gradient_Flow[Point][iDim] = Gradient_Flow[Point][iDim] - ConsVar_Sol[Point][0] * Normal[iDim];
+          Gradient_Adj[Point][iDim] = Gradient_Adj[Point][iDim] - AdjVar_Sol[Point][0] * Normal[iDim];
+        }
+      }
+  
+  for (iPoint = 0; iPoint<geometry->GetnPoint(); iPoint++)
+    for (iDim = 0; iDim < nDim; iDim++) {
+      DualArea = geometry->node[iPoint]->GetVolume();
+      Gradient_Flow[iPoint][iDim] = Gradient_Flow[iPoint][iDim]/DualArea;
+      Gradient_Adj[iPoint][iDim] = Gradient_Adj[iPoint][iDim]/DualArea;
+    }
+  
+  // Compute the the adaptation index at each point.
+  for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint ++) {
+    Dual_Area=geometry->node[iPoint]->GetVolume();
+    norm = 0.0;
+    for (iDim = 0; iDim < nDim; iDim++)
+      norm += Gradient_Flow[iPoint][iDim]*Gradient_Flow[iPoint][iDim];
+    norm = sqrt(norm);
+    Index[iPoint] = pow(Dual_Area, scale_area)*norm;
+  }
+  
+  
+  SetSensorElem(geometry, config, max_elem_new_flow);
+  
+  // Compute the the adaptation index at each point.
+  for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint ++) {
+    Dual_Area=geometry->node[iPoint]->GetVolume();
+    norm = 0.0;
+    for (iDim = 0; iDim < nDim; iDim++)
+      norm += Gradient_Adj[iPoint][iDim]*Gradient_Adj[iPoint][iDim];
+    norm = sqrt(norm); 
+    Index[iPoint] = pow(Dual_Area, scale_area)*norm;
+  }
+  
+  SetSensorElem(geometry, config, max_elem_new_adj);
+  
 }
 
 void CGridAdaptation::SetIndicator_Robust(CGeometry *geometry, CConfig *config) {
@@ -3633,22 +3532,29 @@ void CGridAdaptation::SetRestart_AdjSolution(CConfig *config, CPhysicalGeometry 
   unsigned short lastindex = copy.find_last_of(".");
   copy = copy.substr(0, lastindex);
 	strcpy (cstr, copy.c_str());
-	if (config->GetKind_ObjFunc() == DRAG_COEFFICIENT)        SPRINTF (buffer, "_cd.dat");
-	if (config->GetKind_ObjFunc() == LIFT_COEFFICIENT)        SPRINTF (buffer, "_cl.dat");
-	if (config->GetKind_ObjFunc() == SIDEFORCE_COEFFICIENT)   SPRINTF (buffer, "_csf.dat");
-	if (config->GetKind_ObjFunc() == INVERSE_DESIGN_PRESSURE) SPRINTF (buffer, "_invpress.dat");
-  if (config->GetKind_ObjFunc() == INVERSE_DESIGN_HEATFLUX) SPRINTF (buffer, "_invheat.dat");
-	if (config->GetKind_ObjFunc() == MOMENT_X_COEFFICIENT)    SPRINTF (buffer, "_cmx.dat");
-	if (config->GetKind_ObjFunc() == MOMENT_Y_COEFFICIENT)    SPRINTF (buffer, "_cmy.dat");
-	if (config->GetKind_ObjFunc() == MOMENT_Z_COEFFICIENT)    SPRINTF (buffer, "_cmz.dat");
-	if (config->GetKind_ObjFunc() == EFFICIENCY)              SPRINTF (buffer, "_eff.dat");
-  if (config->GetKind_ObjFunc() == FORCE_X_COEFFICIENT)     SPRINTF (buffer, "_cfx.dat");
-	if (config->GetKind_ObjFunc() == FORCE_Y_COEFFICIENT)     SPRINTF (buffer, "_cfy.dat");
-	if (config->GetKind_ObjFunc() == FORCE_Z_COEFFICIENT)     SPRINTF (buffer, "_cfz.dat");
-  if (config->GetKind_ObjFunc() == TOTAL_HEATFLUX)          SPRINTF (buffer, "_totheat.dat");
-  if (config->GetKind_ObjFunc() == MAXIMUM_HEATFLUX)        SPRINTF (buffer, "_maxheat.dat");
-  if (config->GetKind_ObjFunc() == AVG_TOTAL_PRESSURE)      SPRINTF (buffer, "_pt.dat");
-  if (config->GetKind_ObjFunc() == MASS_FLOW_RATE)          SPRINTF (buffer, "_mfr.dat");
+  if (config->GetnObj()>1) {
+    SPRINTF (buffer, "_combo.dat");
+  }
+  else {
+    if (config->GetKind_ObjFunc() == DRAG_COEFFICIENT)        SPRINTF (buffer, "_cd.dat");
+    if (config->GetKind_ObjFunc() == LIFT_COEFFICIENT)        SPRINTF (buffer, "_cl.dat");
+    if (config->GetKind_ObjFunc() == SIDEFORCE_COEFFICIENT)   SPRINTF (buffer, "_csf.dat");
+    if (config->GetKind_ObjFunc() == INVERSE_DESIGN_PRESSURE) SPRINTF (buffer, "_invpress.dat");
+    if (config->GetKind_ObjFunc() == INVERSE_DESIGN_HEATFLUX) SPRINTF (buffer, "_invheat.dat");
+    if (config->GetKind_ObjFunc() == MOMENT_X_COEFFICIENT)    SPRINTF (buffer, "_cmx.dat");
+    if (config->GetKind_ObjFunc() == MOMENT_Y_COEFFICIENT)    SPRINTF (buffer, "_cmy.dat");
+    if (config->GetKind_ObjFunc() == MOMENT_Z_COEFFICIENT)    SPRINTF (buffer, "_cmz.dat");
+    if (config->GetKind_ObjFunc() == EFFICIENCY)              SPRINTF (buffer, "_eff.dat");
+    if (config->GetKind_ObjFunc() == FORCE_X_COEFFICIENT)     SPRINTF (buffer, "_cfx.dat");
+    if (config->GetKind_ObjFunc() == FORCE_Y_COEFFICIENT)     SPRINTF (buffer, "_cfy.dat");
+    if (config->GetKind_ObjFunc() == FORCE_Z_COEFFICIENT)     SPRINTF (buffer, "_cfz.dat");
+    if (config->GetKind_ObjFunc() == TOTAL_HEATFLUX)          SPRINTF (buffer, "_totheat.dat");
+    if (config->GetKind_ObjFunc() == MAXIMUM_HEATFLUX)        SPRINTF (buffer, "_maxheat.dat");
+    if (config->GetKind_ObjFunc() == AVG_TOTAL_PRESSURE)      SPRINTF (buffer, "_pt.dat");
+    if (config->GetKind_ObjFunc() == AVG_OUTLET_PRESSURE)      SPRINTF (buffer, "_pe.dat");
+    if (config->GetKind_ObjFunc() == MASS_FLOW_RATE)          SPRINTF (buffer, "_mfr.dat");
+    if (config->GetKind_ObjFunc() == OUTFLOW_GENERALIZED)       SPRINTF (buffer, "_chn.dat");
+  }
   
 	strcat(cstr, buffer);
 	
@@ -3729,8 +3635,8 @@ void CGridAdaptation::SetSensorElem(CGeometry *geometry, CConfig *config, unsign
 	while (nElem_real <= max_elem) {
 		for (iElem = 0; iElem < geometry->GetnElem(); iElem ++)
 			if ( Sensor[iElem] >= threshold && !geometry->elem[iElem]->GetDivide() ) {
-				if (geometry->elem[iElem]->GetVTK_Type() == TRIANGLE) nElem_real = nElem_real + 3;	
-				if (geometry->elem[iElem]->GetVTK_Type() == QUADRILATERAL) nElem_real = nElem_real + 3;	
+				if (geometry->elem[iElem]->GetVTK_Type() == TRIANGLE) nElem_real = nElem_real + 3;
+				if (geometry->elem[iElem]->GetVTK_Type() == QUADRILATERAL) nElem_real = nElem_real + 3;
 				if (geometry->elem[iElem]->GetVTK_Type() == TETRAHEDRON) nElem_real = nElem_real + 7;
 				geometry->elem[iElem]->SetDivide(true);
 				if (nElem_real >= max_elem) break;
