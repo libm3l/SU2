@@ -2562,9 +2562,8 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 
 	nDim = geometry->GetnDim();
 
-//    cout << "Old angles are: " << motion_data_old->angles[0] << ", " << motion_data_old->angles[1]<< ", " << motion_data_old->angles[2]<< endl;
       cout << "Angles are: " << motion_data->angles[0] << ", " << motion_data->angles[1]<< ", " << motion_data->angles[2]<< endl;
-//    cout << "Center of rotation is: " << motion_data->rotcenter[0] << ", " << motion_data->rotcenter[1]<< ", " << motion_data->rotcenter[2]<< endl;
+      cout << "Center of rotation is: " << motion_data->rotcenter[0] << ", " << motion_data->rotcenter[1]<< ", " << motion_data->rotcenter[2]<< endl;
 
 /*  psi   - yaw
  *  theta - pitch

@@ -275,8 +275,8 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
       
 	  clock_gettime(CLOCK_REALTIME, &now);
 	  seconds = (double)((now.tv_sec+now.tv_nsec*1e-9) - (double)(tmstart.tv_sec+tmstart.tv_nsec*1e-9));
-	  printf("wall time %fs\n", seconds);
-	  cout << endl << " Data from external process received" << endl;
+
+	  cout << endl << " Data from external process received, communication time: " << seconds << " seconds" << endl;
       }
 
 /*
@@ -2529,7 +2529,7 @@ void FEM_StructuralIteration(COutput *output, CIntegration ***integration_contai
 }
 
 
-int   communicate(CConfig *config, CSolver ****solver_container, d6dof_t *angle, int iter, conn_t *conn)
+int communicate(CConfig *config, CSolver ****solver_container, d6dof_t *angle, int iter, conn_t *conn)
 {
 /*
  * function is a communication routine through 
@@ -2618,8 +2618,6 @@ int   communicate(CConfig *config, CSolver ****solver_container, d6dof_t *angle,
 	TmpNode->data.df[7]= Cfx;
 	TmpNode->data.df[8]= Cfy;
 	TmpNode->data.df[9]= Cfz;
-	
-	printf("%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf \n", Lift, Drag, Side, Ceff, Cmx, Cmy, Cmz, Cfx, Cfy, Cfz);
 /*
  * add time
  */
