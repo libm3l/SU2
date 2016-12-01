@@ -59,6 +59,7 @@ extern "C" {
 #include "primal_grid_structure.hpp"
 #include "dual_grid_structure.hpp"
 #include "config_structure.hpp"
+#include "external_comm_structure.hpp"
 
 using namespace std;
 
@@ -101,10 +102,12 @@ protected:
   Global_nelem_triangle_bound,          /*!< \brief Total number of triangles on the mesh boundaries across all processors. */
   nelem_quad_bound,        /*!< \brief Number of quads on the mesh boundaries. */
   Global_nelem_quad_bound;        /*!< \brief Total number of quads on the mesh boundaries across all processors. */
-	unsigned short nDim,	/*!< \brief Number of dimension of the problem. */
+  unsigned short nDim,	/*!< \brief Number of dimension of the problem. */
 	nZone,								/*!< \brief Number of zones in the problem. */
 	nMarker;				/*!< \brief Number of different markers of the mesh. */
   unsigned long Max_GlobalPoint;  /*!< \brief Greater global point in the domain local structure. */
+  CExtIntrf *Interface            /*!< \brief Interfaces information. */
+  int nIntf,					/*!< \brief Number of interfaces. */
 
 public:
 	unsigned long *nElem_Bound;			/*!< \brief Number of elements of the boundary. */
@@ -305,10 +308,27 @@ public:
 	 */
 	unsigned long GetnElem_Bound(unsigned short val_marker);
 
-  /*!
+        /*!
 	 * \brief Get the number of elements in vtk fortmat.
 	 */
 	unsigned long GetMax_GlobalPoint(void);
+
+	/*! 
+	 * \brief Set the number of interfaces.
+	 * \param[in] nIntf - Number of interfaces.
+	 */	
+	void SetnIntf(unsigned int nIntf);
+
+	/*! 
+	 * \brief Get the number of interfaces.
+	 */	
+	void GetnIntf();
+
+	/*! 
+	 * \brief Set the number of grid points in the domain.
+	 * \param[in] val_npoint - Number of grid points in the domain.
+	 */	
+	virtual void GetnIntf();
 
 	/*! 
 	 * \brief A virtual function.
