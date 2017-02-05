@@ -61,7 +61,7 @@ void External_Comm(CGeometry ***geometry_container, CSurfaceMovement **surface_m
   p_6DOFdata_old = &d6dofdata_old;
   pconn = &conn;
 
-        cout << " Outside:   --------------------------  " << endl;
+        cout << " JKA Outside:   --------------------------  " << endl;
  
 }
 
