@@ -3722,6 +3722,7 @@ protected:
   ***CharacPrimVar,    /*!< \brief Value of the characteristic variables at each boundary. */
   ***DonorPrimVar,    /*!< \brief Value of the donor variables at each boundary. */
   *ForceInviscid,    /*!< \brief Inviscid force for each boundary. */
+  *ForceInviscidM,    /*!< \brief Inviscid force for each boundary. */
   *MomentInviscid,  /*!< \brief Inviscid moment for each boundary. */
   *ForceMomentum,    /*!< \brief Inviscid force for each boundary. */
   *MomentMomentum;  /*!< \brief Inviscid moment for each boundary. */
