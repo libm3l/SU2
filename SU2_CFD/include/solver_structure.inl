@@ -138,6 +138,10 @@ inline su2double CSolver::GetCD_Inv(unsigned short val_marker) { return 0; }
 
 inline su2double CSolver::GetCL_Inv(unsigned short val_marker) { return 0; }
 
+inline su2double CSolver::GetModalF1(unsigned short val_marker) { return 0; }
+
+inline su2double CSolver::GetModalF2(unsigned short val_marker) { return 0; }
+
 inline su2double CSolver::GetSurface_CL(unsigned short val_marker) { return 0; }
 
 inline su2double CSolver::GetSurface_CD(unsigned short val_marker) { return 0; }
@@ -159,6 +163,8 @@ inline su2double CSolver::GetSurface_CMy(unsigned short val_marker) { return 0; 
 inline su2double CSolver::GetSurface_CMz(unsigned short val_marker) { return 0; }
 
 inline su2double CSolver::GetSurface_CL_Inv(unsigned short val_marker) { return 0; }
+inline su2double CSolver::GetSurface_ModalF1(unsigned short val_marker) { return 0; }
+inline su2double CSolver::GetSurface_ModalF2(unsigned short val_marker) { return 0; }
 
 inline su2double CSolver::GetSurface_CD_Inv(unsigned short val_marker) { return 0; }
 
@@ -243,6 +249,8 @@ inline su2double CSolver::GetCSF_Visc(unsigned short val_marker) { return 0; }
 inline su2double CSolver::GetCD_Visc(unsigned short val_marker) { return 0; }
 
 inline su2double CSolver::GetAllBound_CL_Inv() { return 0; }
+inline su2double CSolver::GetAllBound_ModalF1() { return 0; }
+inline su2double CSolver::GetAllBound_ModalF2() { return 0; }
 
 inline su2double CSolver::GetAllBound_CD_Inv() { return 0; }
 
@@ -1042,6 +1050,10 @@ inline void CEulerSolver::SetInlet_FlowDir(unsigned short val_marker, unsigned l
 
 inline su2double CEulerSolver::GetCL_Inv(unsigned short val_marker) { return CL_Inv[val_marker]; }
 
+inline su2double CEulerSolver::GetModalF1(unsigned short val_marker) { return ModalF1[val_marker]; }
+
+inline su2double CEulerSolver::GetModalF2(unsigned short val_marker) { return ModalF2[val_marker]; }
+
 inline su2double CEulerSolver::GetCMz_Inv(unsigned short val_marker) { return CMz_Inv[val_marker]; }
 
 inline su2double CEulerSolver::GetCD_Inv(unsigned short val_marker) { return CD_Inv[val_marker]; }
@@ -1067,6 +1079,10 @@ inline su2double CEulerSolver::GetSurface_CMy(unsigned short val_marker) { retur
 inline su2double CEulerSolver::GetSurface_CMz(unsigned short val_marker) { return Surface_CMz[val_marker]; }
 
 inline su2double CEulerSolver::GetSurface_CL_Inv(unsigned short val_marker) { return Surface_CL_Inv[val_marker]; }
+
+inline su2double CEulerSolver::GetSurface_ModalF1(unsigned short val_marker) { return Surface_ModalF1[val_marker]; }
+
+inline su2double CEulerSolver::GetSurface_ModalF2(unsigned short val_marker) { return Surface_ModalF2[val_marker]; }
 
 inline su2double CEulerSolver::GetSurface_CD_Inv(unsigned short val_marker) { return Surface_CD_Inv[val_marker]; }
 
@@ -1253,6 +1269,10 @@ inline void CEulerSolver::SetTotal_Custom(su2double val_Total_Custom, su2double 
 inline void CEulerSolver::AddTotal_Custom(su2double val_Total_Custom, su2double val_coeff) { Total_Custom += val_Total_Custom*val_coeff; }
 
 inline su2double CEulerSolver::GetAllBound_CL_Inv() { return AllBound_CL_Inv; }
+
+inline su2double CEulerSolver::GetAllBound_ModalF1() { return AllBound_ModalF1; }
+
+inline su2double CEulerSolver::GetAllBound_ModalF2() { return AllBound_ModalF2; }
 
 inline su2double CEulerSolver::GetAllBound_CD_Inv() { return AllBound_CD_Inv; }
 
@@ -1581,6 +1601,8 @@ inline su2double CIncEulerSolver::GetSurface_CMy(unsigned short val_marker) { re
 inline su2double CIncEulerSolver::GetSurface_CMz(unsigned short val_marker) { return Surface_CMz[val_marker]; }
 
 inline su2double CIncEulerSolver::GetSurface_CL_Inv(unsigned short val_marker) { return Surface_CL_Inv[val_marker]; }
+inline su2double CIncEulerSolver::GetSurface_ModalF1(unsigned short val_marker) { return Surface_ModalF1[val_marker]; }
+inline su2double CIncEulerSolver::GetSurface_ModalF2(unsigned short val_marker) { return Surface_ModalF2[val_marker]; }
 
 inline su2double CIncEulerSolver::GetSurface_CD_Inv(unsigned short val_marker) { return Surface_CD_Inv[val_marker]; }
 
@@ -1653,6 +1675,10 @@ inline void CIncEulerSolver::SetTotal_HeatFluxDiff(su2double heat) { Total_HeatF
 inline void CIncEulerSolver::SetTotal_CD(su2double val_Total_CD) { Total_CD = val_Total_CD; }
 
 inline su2double CIncEulerSolver::GetAllBound_CL_Inv() { return AllBound_CL_Inv; }
+
+//  inline su2double CIncEulerSolver::GetAllBound_ModalF1() { return AllBound_ModalF1; }
+
+//  inline su2double CIncEulerSolver::GetAllBound_ModalF2() { return AllBound_ModalF2; }
 
 inline su2double CIncEulerSolver::GetAllBound_CD_Inv() { return AllBound_CD_Inv; }
 

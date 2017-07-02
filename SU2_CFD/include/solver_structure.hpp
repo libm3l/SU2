@@ -1719,7 +1719,18 @@ public:
    * \return Value of the lift coefficient (inviscid contribution) on the surface <i>val_marker</i>.
    */
   virtual su2double GetCL_Inv(unsigned short val_marker);
-  
+    /*!
+   * \brief A virtual member.
+   * \param[in] val_marker - Surface marker where the coefficient is computed.
+   * \return Value of the lift coefficient (inviscid contribution) on the surface <i>val_marker</i>.
+   */
+  virtual su2double GetModalF1(unsigned short val_marker);  
+    /*!
+   * \brief A virtual member.
+   * \param[in] val_marker - Surface marker where the coefficient is computed.
+   * \return Value of the lift coefficient (inviscid contribution) on the surface <i>val_marker</i>.
+   */
+  virtual su2double GetModalF2(unsigned short val_marker);   
   /*!
    * \brief A virtual member.
    * \param[in] val_marker - Surface marker where the coefficient is computed.
@@ -1817,6 +1828,18 @@ public:
    * \return Value of the lift coefficient on the surface <i>val_marker</i>.
    */
   virtual su2double GetSurface_CL_Inv(unsigned short val_marker);
+    /*!
+   * \brief A virtual member.
+   * \param[in] val_marker - Surface marker where the coefficient is computed.
+   * \return Value of the lift coefficient on the surface <i>val_marker</i>.
+   */
+  virtual su2double GetSurface_ModalF1(unsigned short val_marker);
+    /*!
+   * \brief A virtual member.
+   * \param[in] val_marker - Surface marker where the coefficient is computed.
+   * \return Value of the lift coefficient on the surface <i>val_marker</i>.
+   */
+  virtual su2double GetSurface_ModalF2(unsigned short val_marker);
   
   /*!
    * \brief A virtual member.
@@ -2463,7 +2486,16 @@ public:
    * \return Value of the lift coefficient (inviscid contribution).
    */
   virtual su2double GetAllBound_CL_Inv(void);
-  
+    /*!
+   * \brief A virtual member.
+   * \return Value of the lift coefficient (inviscid contribution).
+   */
+  virtual su2double GetAllBound_ModalF1(void);
+    /*!
+   * \brief A virtual member.
+   * \return Value of the lift coefficient (inviscid contribution).
+   */
+  virtual su2double GetAllBound_ModalF2(void);  
   /*!
    * \brief A virtual member.
    * \return Value of the drag coefficient (inviscid contribution).
@@ -3631,6 +3663,8 @@ protected:
   su2double
   *CD_Inv,  /*!< \brief Drag coefficient (inviscid contribution) for each boundary. */
   *CL_Inv,      /*!< \brief Lift coefficient (inviscid contribution) for each boundary. */
+  *ModalF1,			/*!< \brief Lift coefficient (inviscid contribution) for each boundary. */
+  *ModalF2,			/*!< \brief Lift coefficient (inviscid contribution) for each boundary. */                                                                                    
   *CSF_Inv,    /*!< \brief Sideforce coefficient (inviscid contribution) for each boundary. */
   *CMx_Inv,      /*!< \brief x Moment coefficient (inviscid contribution) for each boundary. */
   *CMy_Inv,      /*!< \brief y Moment coefficient (inviscid contribution) for each boundary. */
@@ -3639,6 +3673,8 @@ protected:
   *CFy_Inv,      /*!< \brief y Force coefficient (inviscid contribution) for each boundary. */
   *CFz_Inv,      /*!< \brief z Force coefficient (inviscid contribution) for each boundary. */
   *Surface_CL_Inv, /*!< \brief Lift coefficient (inviscid contribution) for each monitoring surface. */
+  *Surface_ModalF1, /*!< \brief Lift coefficient (inviscid contribution) for each monitoring surface. */
+  *Surface_ModalF2, /*!< \brief Lift coefficient (inviscid contribution) for each monitoring surface. */
   *Surface_CD_Inv, /*!< \brief Drag coefficient (inviscid contribution) for each monitoring surface. */
   *Surface_CSF_Inv, /*!< \brief Side-force coefficient (inviscid contribution) for each monitoring surface. */
   *Surface_CEff_Inv, /*!< \brief Side-force coefficient (inviscid contribution) for each monitoring surface. */
@@ -3712,6 +3748,8 @@ protected:
   su2double
   AllBound_CD_Inv,  /*!< \brief Total drag coefficient (inviscid contribution) for all the boundaries. */
   AllBound_CL_Inv,      /*!< \brief Total lift coefficient (inviscid contribution) for all the boundaries. */
+  AllBound_ModalF1,			/*!< \brief Modal coord1 */
+  AllBound_ModalF2,			/*!< \brief Modal coord2 */                                                                                        
   AllBound_CSF_Inv,      /*!< \brief Total sideforce coefficient (inviscid contribution) for all the boundaries. */
   AllBound_CMx_Inv,      /*!< \brief Total x moment coefficient (inviscid contribution) for all the boundaries. */
   AllBound_CMy_Inv,      /*!< \brief Total y moment coefficient (inviscid contribution) for all the boundaries. */
@@ -4872,7 +4910,18 @@ public:
    * \return Value of the lift coefficient (inviscid contribution) on the surface <i>val_marker</i>.
    */
   su2double GetCL_Inv(unsigned short val_marker);
-  
+    /*!
+   * \brief Provide the non dimensional lift coefficient (inviscid contribution).
+   * \param val_marker Surface where the coefficient is going to be computed.
+   * \return Value of the lift coefficient (inviscid contribution) on the surface <i>val_marker</i>.
+   */
+  su2double GetModalF1(unsigned short val_marker);
+    /*!
+   * \brief Provide the non dimensional lift coefficient (inviscid contribution).
+   * \param val_marker Surface where the coefficient is going to be computed.
+   * \return Value of the lift coefficient (inviscid contribution) on the surface <i>val_marker</i>.
+   */
+  su2double GetModalF2(unsigned short val_marker);  
   /*!
    * \brief Provide the non dimensional z moment coefficient (inviscid contribution).
    * \param val_marker Surface where the coefficient is going to be computed.
@@ -4956,6 +5005,18 @@ public:
    * \return Value of the lift coefficient on the surface <i>val_marker</i>.
    */
   su2double GetSurface_CL_Inv(unsigned short val_marker);
+    /*!
+   * \brief Provide the non dimensional lift coefficient.
+   * \param[in] val_marker - Surface marker where the coefficient is computed.
+   * \return Value of the lift coefficient on the surface <i>val_marker</i>.
+   */
+  su2double GetSurface_ModalF1(unsigned short val_marker);
+    /*!
+   * \brief Provide the non dimensional lift coefficient.
+   * \param[in] val_marker - Surface marker where the coefficient is computed.
+   * \return Value of the lift coefficient on the surface <i>val_marker</i>.
+   */
+  su2double GetSurface_ModalF2(unsigned short val_marker);
   
   /*!
    * \brief Provide the non dimensional drag coefficient.
@@ -5549,7 +5610,16 @@ public:
    * \return Value of the lift coefficient (inviscid contribution).
    */
   su2double GetAllBound_CL_Inv(void);
-  
+    /*!
+   * \brief Get the inviscid contribution to the lift coefficient.
+   * \return Value of the lift coefficient (inviscid contribution).
+   */
+  su2double GetAllBound_ModalF1(void);
+    /*!
+   * \brief Get the inviscid contribution to the lift coefficient.
+   * \return Value of the lift coefficient (inviscid contribution).
+   */
+  su2double GetAllBound_ModalF2(void);  
   /*!
    * \brief Get the inviscid contribution to the drag coefficient.
    * \return Value of the drag coefficient (inviscid contribution).
@@ -6004,6 +6074,8 @@ protected:
   su2double
   *CD_Inv,  /*!< \brief Drag coefficient (inviscid contribution) for each boundary. */
   *CL_Inv,      /*!< \brief Lift coefficient (inviscid contribution) for each boundary. */
+  *ModalF1, /*!< \brief Lift coefficient (inviscid contribution) for each monitoring surface. */
+  *ModalF2, /*!< \brief Lift coefficient (inviscid contribution) for each monitoring surface. */                                                                                   
   *CSF_Inv,    /*!< \brief Sideforce coefficient (inviscid contribution) for each boundary. */
   *CMx_Inv,      /*!< \brief x Moment coefficient (inviscid contribution) for each boundary. */
   *CMy_Inv,      /*!< \brief y Moment coefficient (inviscid contribution) for each boundary. */
@@ -6012,6 +6084,8 @@ protected:
   *CFy_Inv,      /*!< \brief y Force coefficient (inviscid contribution) for each boundary. */
   *CFz_Inv,      /*!< \brief z Force coefficient (inviscid contribution) for each boundary. */
   *Surface_CL_Inv, /*!< \brief Lift coefficient (inviscid contribution) for each monitoring surface. */
+  *Surface_ModalF1, /*!< \brief Lift coefficient (inviscid contribution) for each monitoring surface. */
+  *Surface_ModalF2, /*!< \brief Lift coefficient (inviscid contribution) for each monitoring surface. */
   *Surface_CD_Inv, /*!< \brief Drag coefficient (inviscid contribution) for each monitoring surface. */
   *Surface_CSF_Inv, /*!< \brief Side-force coefficient (inviscid contribution) for each monitoring surface. */
   *Surface_CEff_Inv, /*!< \brief Side-force coefficient (inviscid contribution) for each monitoring surface. */
@@ -6063,6 +6137,8 @@ protected:
   su2double
   AllBound_CD_Inv,  /*!< \brief Total drag coefficient (inviscid contribution) for all the boundaries. */
   AllBound_CL_Inv,      /*!< \brief Total lift coefficient (inviscid contribution) for all the boundaries. */
+  AllBound_ModalF1,      /*!< \brief Total lift coefficient (inviscid contribution) for all the boundaries. */
+  AllBound_ModalF2,      /*!< \brief Total lift coefficient (inviscid contribution) for all the boundaries. */
   AllBound_CSF_Inv,      /*!< \brief Total sideforce coefficient (inviscid contribution) for all the boundaries. */
   AllBound_CMx_Inv,      /*!< \brief Total x moment coefficient (inviscid contribution) for all the boundaries. */
   AllBound_CMy_Inv,      /*!< \brief Total y moment coefficient (inviscid contribution) for all the boundaries. */
@@ -6685,6 +6761,8 @@ public:
    * \return Value of the lift coefficient on the surface <i>val_marker</i>.
    */
   su2double GetSurface_CL_Inv(unsigned short val_marker);
+  su2double GetSurface_ModalF1(unsigned short val_marker);
+  su2double GetSurface_ModalF2(unsigned short val_marker);
   
   /*!
    * \brief Provide the non dimensional drag coefficient.
