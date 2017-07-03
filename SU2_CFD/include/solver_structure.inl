@@ -435,8 +435,8 @@ inline su2double CSolver::GetTotal_CWave() { return 0; }
 inline su2double CSolver::GetTotal_CHeat() { return 0; }
 
 inline void CSolver::SetTotal_CL(su2double val_Total_CL) { }
-inline void CSolver::SetTotal_ModalF1(su2double val_Total_ModalF1) { }
-inline void CSolver::SetTotal_ModalF2(su2double val_Total_ModalF2) { }
+//inline void CSolver::SetTotal_ModalF1(su2double val_Total_ModalF1) { }
+//inline void CSolver::SetTotal_ModalF2(su2double val_Total_ModalF2) { }
 
 inline void CSolver::SetTotal_CD(su2double val_Total_CD) { }
 
@@ -1252,7 +1252,7 @@ inline void CEulerSolver::SetTotal_CNearFieldOF(su2double cnearfieldpress) { Tot
 
 inline void CEulerSolver::SetTotal_CL(su2double val_Total_CL) { Total_CL = val_Total_CL; }
 //inline void CEulerSolver::SetTotal_ModalF1(su2double val_Total_ModalF2) { Total_ModalF1 = val_Total_ModalF1; }
-inline void CEulerSolver::SetTotal_ModalF2(su2double val_Total_ModalF2) { Total_ModalF2 = val_Total_ModalF2; }
+//inline void CEulerSolver::SetTotal_ModalF2(su2double val_Total_ModalF2) { Total_ModalF2 = val_Total_ModalF2; }
 
 inline void CEulerSolver::SetTotal_CD(su2double val_Total_CD) { Total_CD = val_Total_CD; }
 

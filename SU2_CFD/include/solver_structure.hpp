@@ -1609,12 +1609,12 @@ public:
    * \brief A virtual member.
    * \param[in] val_Total_ModalF1 - Value of the total lift coefficient.
    */
-  virtual void SetTotal_ModalF1(su2double val_Total_ModalF1);
+//  virtual void SetTotal_ModalF1(su2double val_Total_ModalF1);
       /*!
    * \brief A virtual member.
    * \param[in] val_Total_ModalF2 - Value of the total lift coefficient.
    */
-  virtual void SetTotal_ModalF2(su2double val_Total_ModalF2);
+//  virtual void SetTotal_ModalF2(su2double val_Total_ModalF2);
   
   
   /*!
@@ -5649,12 +5649,12 @@ public:
    * \brief Store the total (inviscid + viscous) non dimensional lift coefficient.
    * \param[in] val_Total_ModalF1 - Value of the total lift coefficient.
    */
-  void SetTotal_ModalF1(su2double val_Total_ModalF1); 
+//  void SetTotal_ModalF1(su2double val_Total_ModalF1); 
   /*!
    * \brief Store the total (inviscid + viscous) non dimensional lift coefficient.
    * \param[in] val_Total_ModalF2 - Value of the total lift coefficient.
    */
-  void SetTotal_ModalF2(su2double val_Total_ModalF2);
+//  void SetTotal_ModalF2(su2double val_Total_ModalF2);
 
   /*!
    * \brief Store the total (inviscid + viscous) non dimensional drag coefficient.
