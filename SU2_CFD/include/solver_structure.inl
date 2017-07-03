@@ -315,6 +315,8 @@ inline void CSolver::SetForceProj_Vector(CGeometry *geometry, CSolver **solver_c
 inline void CSolver::SetIntBoundary_Jump(CGeometry *geometry, CSolver **solver_container, CConfig *config) { }
 
 inline su2double CSolver::GetTotal_CL() { return 0; }
+inline su2double CSolver::GetTotal_ModalF1() { return 0; }
+inline su2double CSolver::GetTotal_ModalF2() { return 0; }
 
 inline su2double CSolver::GetTotal_CD() { return 0; }
 
@@ -433,6 +435,8 @@ inline su2double CSolver::GetTotal_CWave() { return 0; }
 inline su2double CSolver::GetTotal_CHeat() { return 0; }
 
 inline void CSolver::SetTotal_CL(su2double val_Total_CL) { }
+inline void CSolver::SetTotal_ModalF1(su2double val_Total_ModalF1) { }
+inline void CSolver::SetTotal_ModalF2(su2double val_Total_ModalF2) { }
 
 inline void CSolver::SetTotal_CD(su2double val_Total_CD) { }
 
@@ -1135,6 +1139,8 @@ inline su2double CEulerSolver::GetCSF_Inv(unsigned short val_marker) { return CS
 inline su2double CEulerSolver::GetCEff_Inv(unsigned short val_marker) { return CEff_Inv[val_marker]; }
 
 inline su2double CEulerSolver::GetTotal_CL() { return Total_CL; }
+inline su2double CEulerSolver::GetTotal_ModalF1() { return Total_ModalF1; }
+inline su2double CEulerSolver::GetTotal_ModalF2() { return Total_ModalF2; }
 
 inline void CEulerSolver::SetTotal_ComboObj(su2double ComboObj) {Total_ComboObj = ComboObj; }
 
@@ -1235,6 +1241,8 @@ inline void CEulerSolver::SetTotal_HeatFluxDiff(su2double heat) { Total_HeatFlux
 inline void CEulerSolver::SetTotal_CNearFieldOF(su2double cnearfieldpress) { Total_CNearFieldOF = cnearfieldpress; }
 
 inline void CEulerSolver::SetTotal_CL(su2double val_Total_CL) { Total_CL = val_Total_CL; }
+//inline void CEulerSolver::SetTotal_ModalF1(su2double val_Total_ModalF2) { Total_ModalF1 = val_Total_ModalF1; }
+inline void CEulerSolver::SetTotal_ModalF2(su2double val_Total_ModalF2) { Total_ModalF2 = val_Total_ModalF2; }
 
 inline void CEulerSolver::SetTotal_CD(su2double val_Total_CD) { Total_CD = val_Total_CD; }
 
@@ -1627,6 +1635,8 @@ inline su2double CIncEulerSolver::GetCSF_Inv(unsigned short val_marker) { return
 inline su2double CIncEulerSolver::GetCEff_Inv(unsigned short val_marker) { return CEff_Inv[val_marker]; }
 
 inline su2double CIncEulerSolver::GetTotal_CL() { return Total_CL; }
+inline su2double CIncEulerSolver::GetTotal_ModalF1() { return Total_ModalF1; }
+inline su2double CIncEulerSolver::GetTotal_ModalF2() { return Total_ModalF2; }
 
 inline su2double CIncEulerSolver::GetTotal_CD() { return Total_CD; }
 

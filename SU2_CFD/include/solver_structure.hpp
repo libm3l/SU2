@@ -1565,6 +1565,18 @@ public:
    */
   virtual void SetTotal_CL(su2double val_Total_CL);
   
+    /*!
+   * \brief A virtual member.
+   * \param[in] val_Total_ModalF1 - Value of the total lift coefficient.
+   */
+  virtual void SetTotal_ModalF1(su2double val_Total_ModalF1);
+      /*!
+   * \brief A virtual member.
+   * \param[in] val_Total_ModalF2 - Value of the total lift coefficient.
+   */
+  virtual void SetTotal_ModalF2(su2double val_Total_ModalF2);
+  
+  
   /*!
    * \brief A virtual member.
    * \param[in] val_Total_CD - Value of the total drag coefficient.
@@ -2342,6 +2354,18 @@ public:
    * \return Value of the lift coefficient (inviscid + viscous contribution).
    */
   virtual su2double GetTotal_CL(void);
+
+   /*!
+   * \brief A virtual member.
+   * \return Value of the lift coefficient (inviscid + viscous contribution).
+   */
+  virtual su2double GetTotal_ModalF1(void);
+ /*!
+   * \brief A virtual member.
+   * \return Value of the lift coefficient (inviscid + viscous contribution).
+   */
+  virtual su2double GetTotal_ModalF2(void);
+
 
   /*!
    * \brief A virtual member.
@@ -3793,6 +3817,8 @@ protected:
   AoA_Prev, /*!< \brief Old value of the AoA for fixed lift mode. */
   Total_CD, /*!< \brief Total drag coefficient for all the boundaries. */
   Total_CL,    /*!< \brief Total lift coefficient for all the boundaries. */
+  Total_ModalF1,    /*!< \brief Total lift coefficient for all the boundaries. */
+  Total_ModalF2,    /*!< \brief Total lift coefficient for all the boundaries. */
   Total_CL_Prev,    /*!< \brief Total lift coefficient for all the boundaries (fixed lift mode). */
   Total_CD_SolidSurf, /*!< \brief Total drag coefficient for all the boundaries. */
   Total_CD_Prev, /*!< \brief Total drag coefficient for all the boundaries (fixed lift mode). */
@@ -5323,6 +5349,18 @@ public:
    * \return Value of the lift coefficient (inviscid + viscous contribution).
    */
   su2double GetTotal_CL(void);
+  
+    /*!
+   * \brief Provide the total (inviscid + viscous) non dimensional lift coefficient.
+   * \return Value of the lift coefficient (inviscid + viscous contribution).
+   */
+  su2double GetTotal_ModalF1(void);
+  
+    /*!
+   * \brief Provide the total (inviscid + viscous) non dimensional lift coefficient.
+   * \return Value of the lift coefficient (inviscid + viscous contribution).
+   */
+  su2double GetTotal_ModalF2(void);
 
   /*!
    * \brief Provide the total (inviscid + viscous) non dimensional drag coefficient.
@@ -5515,6 +5553,17 @@ public:
    * \param[in] val_Total_CL - Value of the total lift coefficient.
    */
   void SetTotal_CL(su2double val_Total_CL);
+
+  /*!
+   * \brief Store the total (inviscid + viscous) non dimensional lift coefficient.
+   * \param[in] val_Total_ModalF1 - Value of the total lift coefficient.
+   */
+  void SetTotal_ModalF1(su2double val_Total_ModalF1); 
+  /*!
+   * \brief Store the total (inviscid + viscous) non dimensional lift coefficient.
+   * \param[in] val_Total_ModalF2 - Value of the total lift coefficient.
+   */
+  void SetTotal_ModalF2(su2double val_Total_ModalF2);
 
   /*!
    * \brief Store the total (inviscid + viscous) non dimensional drag coefficient.
@@ -6182,7 +6231,11 @@ protected:
   Total_CD_Prev, /*!< \brief Total drag coefficient for all the boundaries (fixed lift mode). */
   Total_ComboObj, /*!< \brief Total 'combo' objective for all monitored boundaries */
   Total_CD, /*!< \brief Total drag coefficient for all the boundaries. */
+  
   Total_CL,    /*!< \brief Total lift coefficient for all the boundaries. */
+  Total_ModalF1,    /*!< \brief Total lift coefficient for all the boundaries. */
+  Total_ModalF2,    /*!< \brief Total lift coefficient for all the boundaries. */
+  
   Total_CSF,    /*!< \brief Total sideforce coefficient for all the boundaries. */
   Total_CMx,      /*!< \brief Total x moment coefficient for all the boundaries. */
   Total_CMy,      /*!< \brief Total y moment coefficient for all the boundaries. */
@@ -6965,6 +7018,16 @@ public:
    * \return Value of the lift coefficient (inviscid + viscous contribution).
    */
   su2double GetTotal_CL(void);
+    /*!
+   * \brief Provide the total (inviscid + viscous) non dimensional lift coefficient.
+   * \return Value of the lift coefficient (inviscid + viscous contribution).
+   */
+  su2double GetTotal_ModalF1(void);
+    /*!
+   * \brief Provide the total (inviscid + viscous) non dimensional lift coefficient.
+   * \return Value of the lift coefficient (inviscid + viscous contribution).
+   */
+  su2double GetTotal_ModalF2(void);
 
   /*!
    * \author H. Kline
