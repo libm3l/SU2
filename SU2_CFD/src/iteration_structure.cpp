@@ -309,8 +309,11 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
       config_container[val_iZone]->SetPitch(val_iZone,p_6DOFdata->angles[1]);
       config_container[val_iZone]->SetRoll(val_iZone,p_6DOFdata->angles[2]);
       
-      if (rank == MASTER_NODE) cout << endl << " Moving mesh" << endl;
+      printf(" Rotation centers are %lf %lf %lf\n", p_6DOFdata->rotcenter[0], p_6DOFdata->rotcenter[1], p_6DOFdata->rotcenter[2]);
+      printf(" Rotation centers are %lf %lf %lf\n", p_6DOFdata->angles[0], p_6DOFdata->angles[1], p_6DOFdata->angles[2]);
       
+      if (rank == MASTER_NODE) cout << endl << " Moving mesh" << endl;
+            
       if(ExtIter == 0)
 /*
  * if the very first iteration, do not transform mesh back, it is in original position
@@ -649,6 +652,8 @@ void CFluidIteration::Iterate(COutput *output,
  *                     communication will be called every subiteration
  * AJNOTE:
  */
+
+printf(" SUBITERATION ..... \n");
   
   /*--- Call Dynamic mesh update if AEROELASTIC motion was specified ---*/
   
@@ -2835,8 +2840,27 @@ int communicateBSCW(CConfig *config, CSolver ****solver_container, d6dof_t *angl
 /*
  * modal forces
  */
+
+printf(" Here in communicate \n");
         ModForce1 = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_ModalF1();
         ModForce2 = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_ModalF2();
+        
+        printf("Modal forces are %lf %lf \n", ModForce1, ModForce2);
+        
+            angle->angles[0] = 0;
+			angle->angles[1] = 0;
+			angle->angles[2] = 0;
+            
+        angle->rotcenter[0] = 0;
+		angle->rotcenter[1] = 0;
+		angle->rotcenter[2] = 0;
+        
+        angle->transvec[0] = 0;
+		angle->transvec[1] = 0;
+		angle->transvec[2] = 0;
+        
+        return  0;
+        
 /*
  * set connection parameters (data link etc)
  */

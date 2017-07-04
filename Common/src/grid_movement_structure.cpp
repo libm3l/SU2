@@ -2686,8 +2686,8 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
   else
   {
            dpsio   = motion_data_old->angles[0]*3.1415926/180.;  // pitch
-           rotXold = motion_data_old->rotcenter[0];
-           rotYold = motion_data_old->rotcenter[1];
+           rotXold = 0.44046/2.;  //motion_data_old->rotcenter[0];
+           rotYold = 0.;                //motion_data_old->rotcenter[1];
      
 	/* Compute sines/cosines. ---*/
   
@@ -2696,30 +2696,40 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 
            cosPsio = cos(dpsio);
            sinPsio = sin(dpsio);
+           
+           printf(" SIN COS  %lf %lf \n", dpsi, dpsio);
 
 	/*--- Loop over and rotate each node in the volume mesh ---*/
 		
 	   if(status_run == 1){
+
 		for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++) {
 
 /*--- Coordinates of the current point ---*/
 			Coord   = geometry->node[iPoint]->GetCoord(); 
    
     /*--- Calculate non-dim. position from rotation center ---*/
-			x = (Coord[0]-rotXold);
-			y = (Coord[1]-rotYold);
+// 			x = (Coord[0]-rotXold);
+// 			y = (Coord[1]-rotYold);
+			x = (Coord[0]-0.4046/2.);
+			y = (Coord[1]);
   
     /*--- Compute transformed point coordinates ---*/
 			xno =  cosPsio*x  + sinPsio*y ;
 			yno = -sinPsio*x  + cosPsio*y ;
 			xn =  cosPsi*xno  - sinPsi*yno ;
 			yn = +sinPsi*xno  + cosPsi*yno ;
-    
+
     /*--- Store new node location & grid velocity. Add center. 
      Do not store the grid velocity if this is an adjoint calculation.---*/
     
-			geometry->node[iPoint]->SetCoord(0, xn + motion_data->rotcenter[0]);      
-			geometry->node[iPoint]->SetCoord(1, yn + motion_data->rotcenter[1]);      
+/*			geometry->node[iPoint]->SetCoord(0, xn + motion_data->rotcenter[0]);      
+			geometry->node[iPoint]->SetCoord(1, yn + motion_data->rotcenter[1]); */  
+
+           xn = xn +0.4046/2.;   
+
+ 			geometry->node[iPoint]->SetCoord(0, xn);      
+ 			geometry->node[iPoint]->SetCoord(1, yn); 
 		}
 	}
 	else{
@@ -2729,14 +2739,18 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
    
     /*--- Calculate non-dim. position from rotation center ---*/
 
-			xn =  cosPsi*Coord[0]  - sinPsi*Coord[0] ;
+			xn =  cosPsi*Coord[0]  - sinPsi*Coord[1] ;
 			yn = +sinPsi*Coord[0]  + cosPsi*Coord[1] ;
     
     /*--- Store new node location & grid velocity. Add center. 
      Do not store the grid velocity if this is an adjoint calculation.---*/
     
-			geometry->node[iPoint]->SetCoord(0, xn + motion_data->rotcenter[0]);      
-			geometry->node[iPoint]->SetCoord(1, yn + motion_data->rotcenter[1]);      
+// 			geometry->node[iPoint]->SetCoord(0, xn + motion_data->rotcenter[0]);      
+// 			geometry->node[iPoint]->SetCoord(1, yn + motion_data->rotcenter[1]);
+
+            xn = xn +0.4046/2.;   
+            geometry->node[iPoint]->SetCoord(0, xn);      
+ 			geometry->node[iPoint]->SetCoord(1, yn); 
 		}
 	}
 	    
