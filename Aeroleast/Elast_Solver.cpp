@@ -168,8 +168,6 @@ int main(int argc, char *argv[])
 	FoundNode = m3l_get_Found_node(SFounds, 0);
 	dt = (lmdouble_t *)m3l_get_data_pointer(FoundNode);
 	m3l_DestroyFound(&SFounds);
-
-	printf("Time step is %lf \n", *dt);
 /*
  * find position in loop
  */
@@ -190,35 +188,36 @@ int main(int argc, char *argv[])
  * first mode - plunging mode
  */
         t = *dt;
+	printf("Time step is %lf \n", t);
 	f1 = 3.33000000000000;  // frequency
 	w1 = 2*3.1415926*f1;
 	md1 = 0;                // damping
 
-	A11 = 0.25*w1*w1 + 1./t*md1*w1+1./t/t;
-	A12 = 0.25*w1*w1;
-	A13 = 0.25*w1*w1 - 1./t*md1*w1+1./t/t;
+	A11 = 0.25*w1*w1 + md1*w1/t+1./(t*t);
+	A12 = 0.25*w1*w1 - 2./(t*t);
+	A13 = 0.25*w1*w1 - md1*w1/t+1./(t*t);
 /*
  * first mode - pitching mode
  */
 	f2 = 5.2000000000000;   // frequency
-	w2 = 2*3.1415926*f1;
+	w2 = 2*3.1415926*f2;
 	md2 = 0;                // damping
 
-	A21 = 0.25*w2*w2 + 1./t*md2*w2+1./t/t;
-	A22 = 0.25*w2*w2;
-	A23 = 0.25*w2*w2 - 1./t*md2*w2+1./t/t;
+	A21 = 0.25*w2*w2 + md2*w2/t+1./(t*t);
+	A22 = 0.25*w2*w2 - 2./(t*t);
+	A23 = 0.25*w2*w2 - md2*w2/t+1./(t*t);
 /*
  * modal forces - they were recevied from SU2
  */
 	mf1_n = ModalForce[0];
 	mf2_n = ModalForce[1];
 
-        if(niter < 3){
+/*        if(niter < 3){
           mf1_n2  = mf1_n;
           mf1_n1  = mf1_n;
           mf2_n2  = mf2_n;
           mf2_n1  = mf2_n;
-        }
+        }*/
 /*
  * get new modal coordinates
  */
@@ -247,7 +246,7 @@ int main(int argc, char *argv[])
 /*
  * get pitching angle and translation
  */
-	psi    = Q1n2*27.264;
+	psi    = Q2n1*27.264;
 	theta  = 0;
 	phi    = 0;
 
