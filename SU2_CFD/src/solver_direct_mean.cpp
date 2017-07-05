@@ -5271,8 +5271,13 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
     Surface_CFx[iMarker_Monitoring]            = 0.0; Surface_CFy[iMarker_Monitoring]            = 0.0;
     Surface_CFz[iMarker_Monitoring]            = 0.0; Surface_CMx[iMarker_Monitoring]            = 0.0;
     Surface_CMy[iMarker_Monitoring]            = 0.0; Surface_CMz[iMarker_Monitoring]            = 0.0;
-    
+/*
+ * ==========================  BSCW wing test case modification ======================    
+ */
     Surface_ModalF1[iMarker_Monitoring]      = 0.0; Surface_ModalF2[iMarker_Monitoring]      = 0.0;
+/*
+ * ==========================  end of BSCW wing test case modification ======================    
+ */
   }
   
   /*--- Loop over the Euler and Navier-Stokes markers ---*/
@@ -5351,7 +5356,9 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
             ForceInviscid[iDim] += Force[iDim];
           }
           
- /*
+/*
+ * ==========================  BSCW wing test case modification ======================    
+ *
  *  AJNOTE: modal coordinates  - Adam Jirasek
  *  BSCW wing, two modes, mode no. 1 Plunge, mode no.2 Pitch
  *  generalized mass = 1
@@ -5362,7 +5369,9 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
           Force[1] = -(Pressure - Pressure_Inf)*Normal[1]* 0.10475589716307500 * (0.4046/2.- Coord[1]) / 0.2023 ;   /*  Pitch,, f = 5.12  */
           ForceInviscidM[1] += Force[1];         
           
-          
+/*
+ * ==========================  end of BSCW wing test case modification ======================    
+ */          
           /*--- Moment with respect to the reference axis ---*/
           
           if (nDim == 3) {
@@ -5391,10 +5400,14 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
             CT_Inv[iMarker]     = -CFx_Inv[iMarker];
             CQ_Inv[iMarker]     = -CMz_Inv[iMarker];
             CMerit_Inv[iMarker] = CT_Inv[iMarker] / (CQ_Inv[iMarker] + EPS);
-                        
+/*
+ * ==========================  BSCW wing test case modification ======================    
+ */                        
             ModalF1[iMarker] = ForceInviscidM[0];
             ModalF2[iMarker] = ForceInviscidM[1]; 
-            
+/*
+ * ==========================  end of BSCW wing test case modification ======================    
+ */            
           }
           if (nDim == 3) {
             CD_Inv[iMarker]      =  ForceInviscid[0]*cos(Alpha)*cos(Beta) + ForceInviscid[1]*sin(Beta) + ForceInviscid[2]*sin(Alpha)*cos(Beta);
@@ -5410,8 +5423,14 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
             CT_Inv[iMarker]         = -CFz_Inv[iMarker];
             CQ_Inv[iMarker]         = -CMz_Inv[iMarker];
             CMerit_Inv[iMarker]     = CT_Inv[iMarker] / (CQ_Inv[iMarker] + EPS);
+/*
+ * ==========================  BSCW wing test case modification ======================    
+ */
              ModalF1[iMarker] = ForceInviscidM[0];
              ModalF2[iMarker] = ForceInviscidM[1];
+/*
+ * ==========================  end of BSCW wing test case modification ======================    
+ */
           }
           
           AllBound_CD_Inv        += CD_Inv[iMarker];
@@ -5427,9 +5446,14 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
           AllBound_CT_Inv           += CT_Inv[iMarker];
           AllBound_CQ_Inv           += CQ_Inv[iMarker];
           AllBound_CMerit_Inv        = AllBound_CT_Inv / (AllBound_CQ_Inv + EPS);
-          
+/*
+ * ==========================  BSCW wing test case modification ======================    
+ */          
           AllBound_ModalF1        += ModalF1[iMarker];
           AllBound_ModalF2        += ModalF2[iMarker];
+/*
+ * ==========================  end of BSCW wing test case modification ======================    
+ */
           
           /*--- Compute the coefficients per surface ---*/
           
@@ -5472,10 +5496,14 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
   MyAllBound_CD_Inv        = AllBound_CD_Inv;        AllBound_CD_Inv = 0.0;
   MyAllBound_CL_Inv        = AllBound_CL_Inv;        AllBound_CL_Inv = 0.0;
   MyAllBound_CSF_Inv   = AllBound_CSF_Inv;   AllBound_CSF_Inv = 0.0;
-  
+/*
+ * ==========================  BSCW wing test case modification ======================    
+ */  
   MyAllBound_ModalF1        = AllBound_ModalF1; 
   MyAllBound_ModalF2        = AllBound_ModalF2;   
-  
+/*
+ * ==========================  end of BSCW wing test case modification ======================    
+ */  
   AllBound_CEff_Inv = 0.0;
   MyAllBound_CMx_Inv          = AllBound_CMx_Inv;          AllBound_CMx_Inv = 0.0;
   MyAllBound_CMy_Inv          = AllBound_CMy_Inv;          AllBound_CMy_Inv = 0.0;
@@ -5492,10 +5520,14 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
   SU2_MPI::Allreduce(&MyAllBound_CL_Inv, &AllBound_CL_Inv, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   SU2_MPI::Allreduce(&MyAllBound_CSF_Inv, &AllBound_CSF_Inv, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   AllBound_CEff_Inv = AllBound_CL_Inv / (AllBound_CD_Inv + EPS);
-  
+/*
+ * ==========================  BSCW wing test case modification ======================    
+ */  
   SU2_MPI::Allreduce(&MyAllBound_ModalF1, &AllBound_ModalF1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   SU2_MPI::Allreduce(&MyAllBound_ModalF2, &AllBound_ModalF2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-  
+/*
+ * ==========================  end of BSCW wing test case modification ======================    
+ */  
   SU2_MPI::Allreduce(&MyAllBound_CMx_Inv, &AllBound_CMx_Inv, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   SU2_MPI::Allreduce(&MyAllBound_CMy_Inv, &AllBound_CMy_Inv, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   SU2_MPI::Allreduce(&MyAllBound_CMz_Inv, &AllBound_CMz_Inv, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -5567,10 +5599,14 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
   
   Total_CD            = AllBound_CD_Inv;
   Total_CL            = AllBound_CL_Inv;
-
+/*
+ * ==========================  BSCW wing test case modification ======================    
+ */
   Total_ModalF1            = AllBound_ModalF1;
   Total_ModalF2            = AllBound_ModalF2;
-
+/*
+ * ==========================  end of BSCW wing test case modification ======================    
+ */
 
   Total_CSF           = AllBound_CSF_Inv;
   Total_CEff          = Total_CL / (Total_CD + EPS);

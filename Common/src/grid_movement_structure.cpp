@@ -2581,6 +2581,14 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 
 	nDim = geometry->GetnDim();
 
+
+/*
+ * ==========================  BSCW wing test case modification ======================    
+ *  
+ * this function is modified to fit the BSCW wing which has a fixed rotation around 
+ * 0.2023  0   0 point (units are meters)
+ */
+
 //      cout << "Angles are: " << motion_data->angles[0] << ", " << motion_data->angles[1]<< ", " << motion_data->angles[2]<< endl;
 //      cout << "Center of rotation is: " << motion_data->rotcenter[0] << ", " << motion_data->rotcenter[1]<< ", " << motion_data->rotcenter[2]<< endl;
 
@@ -2601,6 +2609,10 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
      rotXold = motion_data_old->rotcenter[0];
      rotYold = motion_data_old->rotcenter[1];
      rotZold = motion_data_old->rotcenter[2];
+
+     rotXold = 0.4046/2.;
+     rotYold = 0.;
+     rotZold = 0.;
 	
      /* Compute sines/cosines. ---*/
    
@@ -2678,9 +2690,13 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
     
     /*--- Store new node location & grid velocity. Add center---*/
     
-		geometry->node[iPoint]->SetCoord(0, rotCoord[0] + motion_data->rotcenter[0]);      
-		geometry->node[iPoint]->SetCoord(1, rotCoord[1] + motion_data->rotcenter[1]);      
-		geometry->node[iPoint]->SetCoord(2, rotCoord[2] + motion_data->rotcenter[2]);      
+//		geometry->node[iPoint]->SetCoord(0, rotCoord[0] + motion_data->rotcenter[0]);      
+//		geometry->node[iPoint]->SetCoord(1, rotCoord[1] + motion_data->rotcenter[1]);      
+//		geometry->node[iPoint]->SetCoord(2, rotCoord[2] + motion_data->rotcenter[2]); 
+
+		geometry->node[iPoint]->SetCoord(0, rotCoord[0] + 0.4046/2.);      
+		geometry->node[iPoint]->SetCoord(1, rotCoord[1]);      
+		geometry->node[iPoint]->SetCoord(2, rotCoord[2]);      
 	}
   }
   else
@@ -2696,8 +2712,6 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 
            cosPsio = cos(dpsio);
            sinPsio = sin(dpsio);
-           
-           printf(" SIN COS  %lf %lf \n", dpsi, dpsio);
 
 	/*--- Loop over and rotate each node in the volume mesh ---*/
 		

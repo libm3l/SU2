@@ -279,10 +279,16 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
          clock_gettime(CLOCK_REALTIME, &tmstart);
 
 //          if( communicate(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn) != 0)
-          if( communicateBSCW(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn) != 0)
+/*
+ * ==========================  BSCW wing test case modification ======================
+ */
 
+          if( communicateBSCW(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn) != 0)
               Error("Communicate()");  
-      
+
+/*
+ * ==========================  end of BSCW wing test case modification ======================
+ */      
 	  clock_gettime(CLOCK_REALTIME, &now);
 	  seconds = (double)((now.tv_sec+now.tv_nsec*1e-9) - (double)(tmstart.tv_sec+tmstart.tv_nsec*1e-9));
 
@@ -660,10 +666,11 @@ void CFluidIteration::Iterate(COutput *output,
   }
 
 /*
+ * ==========================  BSCW wing test case modification ======================
+ *
  * AJNOTE: Adam Jirasek: if any strong coupling to be done
  *                     make a call here, at this position the 
  *                     communication will be called every subiteration
- * AJNOTE:
  */
  /*
   * motion prescribed by external solver, get the previous iteration 
@@ -751,6 +758,9 @@ void CFluidIteration::Iterate(COutput *output,
 //     }
 //     
 //   }
+/*
+ * ==========================  end of BSCW wing test case modification ======================
+ */
 
   if ( unsteady && !config_container[val_iZone]->GetDiscrete_Adjoint() )
     
