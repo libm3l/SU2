@@ -5374,6 +5374,8 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
         
       }
       
+      printf(" Modal forces here are %lf %lf \n", ForceInviscidM[0], ForceInviscidM[1]);
+      
       /*--- Project forces and store the non-dimensional coefficients ---*/
       
       if (Monitoring == YES) {
@@ -5565,6 +5567,11 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
   
   Total_CD            = AllBound_CD_Inv;
   Total_CL            = AllBound_CL_Inv;
+
+  Total_ModalF1            = AllBound_ModalF1;
+  Total_ModalF2            = AllBound_ModalF2;
+
+
   Total_CSF           = AllBound_CSF_Inv;
   Total_CEff          = Total_CL / (Total_CD + EPS);
   Total_CMx           = AllBound_CMx_Inv;
