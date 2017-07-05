@@ -596,6 +596,19 @@ void CFluidIteration::Iterate(COutput *output,
                                  unsigned short val_iZone) {
   unsigned long IntIter, ExtIter;
   
+  d6dof_t d6dofdata, d6dofdata_old, *p_6DOFdata, *p_6DOFdata_old;
+  conn_t conn, *pconn;
+  struct timespec now, tmstart;
+  double seconds;
+  p_6DOFdata = &d6dofdata;
+  p_6DOFdata_old = &d6dofdata_old;
+  pconn = &conn;
+  
+    int rank = MASTER_NODE;
+#ifdef HAVE_MPI
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif
+  
   bool unsteady = (config_container[val_iZone]->GetUnsteady_Simulation() == DT_STEPPING_1ST) || (config_container[val_iZone]->GetUnsteady_Simulation() == DT_STEPPING_2ND);
   
   ExtIter = config_container[val_iZone]->GetExtIter();
@@ -652,25 +665,93 @@ void CFluidIteration::Iterate(COutput *output,
  *                     communication will be called every subiteration
  * AJNOTE:
  */
+ /*
+  * motion prescribed by external solver, get the previous iteration 
+  * rotational angles, displacement and rotation center
+  */
+      p_6DOFdata_old->angles[0] = config_container[val_iZone]->GetYaw(val_iZone);
+      p_6DOFdata_old->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
+      p_6DOFdata_old->angles[2] = config_container[val_iZone]->GetRoll(val_iZone);
+      
+      p_6DOFdata_old->rotcenter[0] = config_container[val_iZone]->GetMotion_Origin_X(val_iZone);
+      p_6DOFdata_old->rotcenter[1] = config_container[val_iZone]->GetMotion_Origin_Y(val_iZone);
+      p_6DOFdata_old->rotcenter[2] = config_container[val_iZone]->GetMotion_Origin_Z(val_iZone);
 
-printf(" SUBITERATION ..... \n");
+      if (rank == MASTER_NODE){
+ /*
+  * MASTER node communicate with external solver
+  */
+         cout << endl << " Sending data to external process." << endl;
+         clock_gettime(CLOCK_REALTIME, &tmstart);
+
+//          if( communicate(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn) != 0)
+          if( communicateBSCW(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn) != 0)
+
+              Error("Communicate()");  
+      
+	  clock_gettime(CLOCK_REALTIME, &now);
+	  seconds = (double)((now.tv_sec+now.tv_nsec*1e-9) - (double)(tmstart.tv_sec+tmstart.tv_nsec*1e-9));
+
+	  cout << endl << " Data from external process received, communication time: " << seconds << " seconds" << endl;
+      }
+/*
+ *recevied angles have to redistrbuted to all partitions
+ */   
+#ifdef HAVE_MPI
+      SU2_MPI::Bcast(p_6DOFdata->angles, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
+      SU2_MPI::Bcast(p_6DOFdata->rotcenter, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
+      SU2_MPI::Bcast(p_6DOFdata->transvec, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
+#endif
+
+/*
+ * Save motion data, they are needed to transform the mesh back to its original position
+ * during next step transformation
+ */
+      config_container[val_iZone]->SetMotion_Origin_X(val_iZone,p_6DOFdata->rotcenter[0]);
+      config_container[val_iZone]->SetMotion_Origin_Y(val_iZone,p_6DOFdata->rotcenter[1]);
+      config_container[val_iZone]->SetMotion_Origin_Z(val_iZone,p_6DOFdata->rotcenter[2]);
+      
+      config_container[val_iZone]->SetYaw(val_iZone,p_6DOFdata->angles[0]);
+      config_container[val_iZone]->SetPitch(val_iZone,p_6DOFdata->angles[1]);
+      config_container[val_iZone]->SetRoll(val_iZone,p_6DOFdata->angles[2]);
+      
+//       printf(" Rotation centers are %lf %lf %lf\n", p_6DOFdata->rotcenter[0], p_6DOFdata->rotcenter[1], p_6DOFdata->rotcenter[2]);
+//       printf(" Rotation angles  are %lf %lf %lf\n", p_6DOFdata->angles[0], p_6DOFdata->angles[1], p_6DOFdata->angles[2]);
+      
+      if (rank == MASTER_NODE) cout << endl << " Moving mesh" << endl;
+            
+      if(ExtIter == 0)
+/*
+ * if the very first iteration, do not transform mesh back, it is in original position
+ */
+         grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
+                                    config_container[val_iZone], val_iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,0);
+       else
+         grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
+                                    config_container[val_iZone], val_iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,1);
+         
+      geometry_container[val_iZone][MESH_0]->SetGridVelocity(config_container[val_iZone], ExtIter);
+      
+      /*--- Update the multigrid structure after moving the finest grid,
+       including computing the grid velocities on the coarser levels. ---*/
+      
+      grid_movement[val_iZone]->UpdateMultiGrid(geometry_container[val_iZone], config_container[val_iZone]);
   
   /*--- Call Dynamic mesh update if AEROELASTIC motion was specified ---*/
   
-  if ((config_container[val_iZone]->GetGrid_Movement()) && (config_container[val_iZone]->GetAeroelastic_Simulation()) && unsteady) {
-      
-    SetGrid_Movement(geometry_container, surface_movement, grid_movement, FFDBox, solver_container, config_container, val_iZone, IntIter, ExtIter);
-    
-    /*--- Apply a Wind Gust ---*/
-    
-    if (config_container[val_iZone]->GetWind_Gust()) {
-      if (IntIter % config_container[val_iZone]->GetAeroelasticIter() == 0 && IntIter != 0)
-        SetWind_GustField(config_container[val_iZone], geometry_container[val_iZone], solver_container[val_iZone]);
-    }
-    
-  }
-  
-  
+//   if ((config_container[val_iZone]->GetGrid_Movement()) && (config_container[val_iZone]->GetAeroelastic_Simulation()) && unsteady) {
+//       
+//     SetGrid_Movement(geometry_container, surface_movement, grid_movement, FFDBox, solver_container, config_container, val_iZone, IntIter, ExtIter);
+//     
+//     /*--- Apply a Wind Gust ---*/
+//     
+//     if (config_container[val_iZone]->GetWind_Gust()) {
+//       if (IntIter % config_container[val_iZone]->GetAeroelasticIter() == 0 && IntIter != 0)
+//         SetWind_GustField(config_container[val_iZone], geometry_container[val_iZone], solver_container[val_iZone]);
+//     }
+//     
+//   }
+
   if ( unsteady && !config_container[val_iZone]->GetDiscrete_Adjoint() )
     
   /*--- Write the convergence history (only screen output) ---*/
