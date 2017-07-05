@@ -2702,6 +2702,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
   else
   {
            dpsio   = motion_data_old->angles[0]*3.1415926/180.;  // pitch
+
            rotXold = 0.44046/2.;  //motion_data_old->rotcenter[0];
            rotYold = 0.;                //motion_data_old->rotcenter[1];
      

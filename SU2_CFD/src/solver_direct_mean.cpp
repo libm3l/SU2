@@ -5383,8 +5383,6 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
         
       }
       
-      printf(" Modal forces here are %lf %lf \n", ForceInviscidM[0], ForceInviscidM[1]);
-      
       /*--- Project forces and store the non-dimensional coefficients ---*/
       
       if (Monitoring == YES) {

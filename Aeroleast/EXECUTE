@@ -1,0 +1,17 @@
+1. Start server, include path
+
+   Server_Main.out --port 31000 --input_file Definition_File_SU2  --show
+
+2. execute structural solver and SU2, order of execution does not play role as long as server
+   is executed first
+
+   ./Elast_Solver.out  IP portno
+
+   IP is an address of computer where Server runs (in most cases it will be   localhost)
+   portno  0 is numbre of port which Server binds   (see  --port 31000 in example line executing Server)
+
+   mpirun -np Nproc  SU2_CFD config file
+
+
+
+   NOTE: both Elast_Solver and SU2_CFD need to know IP address and port number of the Server!!!! 
