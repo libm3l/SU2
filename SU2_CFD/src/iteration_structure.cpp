@@ -83,7 +83,7 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
    so that the meshes are positioned correctly for each instance. ---*/
   if (harmonic_balance) {
     ExtIter = val_iZone;
-    Kind_Grid_Movement = config_container[val_iZone]->GetKind_GridMovement(ZONE_0);
+    
   }
 
   int rank = MASTER_NODE;
@@ -680,6 +680,9 @@ void CFluidIteration::Iterate(COutput *output,
   * motion prescribed by external solver, get the previous iteration 
   * rotational angles, displacement and rotation center
   */
+      if( config_container[val_iZone]->GetKind_GridMovement(ZONE_0) == EXTERNAL){
+
+      
       p_6DOFdata_old->angles[0] = config_container[val_iZone]->GetYaw(val_iZone);
       p_6DOFdata_old->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
       p_6DOFdata_old->angles[2] = config_container[val_iZone]->GetRoll(val_iZone);
@@ -751,6 +754,8 @@ void CFluidIteration::Iterate(COutput *output,
        including computing the grid velocities on the coarser levels. ---*/
       
       grid_movement[val_iZone]->UpdateMultiGrid(geometry_container[val_iZone], config_container[val_iZone]);
+
+}
   
   /*--- Call Dynamic mesh update if AEROELASTIC motion was specified ---*/
   
