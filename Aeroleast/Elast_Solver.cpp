@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
 	node_t *Gnode=NULL, *Snode=NULL, *FoundNode=NULL, *TmpNode=NULL;
 	size_t i, niter, dim[1];
 
-	lmint_t sockfd, portno;
+	lmint_t sockfd, portno, restart;
 
         socklen_t clilen;
         struct sockaddr_in cli_addr;
@@ -67,6 +67,7 @@ int main(int argc, char *argv[])
         lmdouble_t A11,A12,A13,A21,A22,A23,mf1_n,mf1_n1,mf1_n2,mf2_n,mf2_n1,mf2_n2;
 	lmdouble_t psi,theta,phi,*dt,t,Ytranslation;
         lmdouble_t Q1n3, Q1n2, Q1n1, Q2n3, Q2n2, Q2n1;
+	lmdouble_t a,b,c,d,timef, count;
 	
 	find_t *SFounds;
 	
@@ -86,8 +87,6 @@ int main(int argc, char *argv[])
 	}
  	portno = atoi(argv[2]);
 
-        if ( (fp = fopen("COORDS","w")) == NULL)
-           Perror("fopen");
 
         mf1_n2  = 0;
         mf1_n1  = 0;
@@ -97,6 +96,41 @@ int main(int argc, char *argv[])
         Q1n2 = 0;
         Q2n3 = 0;
         Q2n2 = 0;
+
+        printf("Restart [1] or not [0]\n");
+        scanf("%d", &restart);
+
+        if(restart == 1){
+
+		if ( (fp = fopen("COORDS","r")) == NULL)
+		   Perror("fopen");
+
+
+		while (fscanf(fp,"%lf %lf %lf %lf %lf", &timef, &a, &b, &c, &d) != EOF) {
+
+			mf1_n2  = mf1_n1;
+			mf1_n1  = mf1_n;
+			mf2_n2  = mf2_n1;
+			mf2_n1  = mf2_n;
+
+			Q1n3 = Q1n2;
+			Q1n2 = Q1n1;
+			Q2n3 = Q2n2;
+			Q2n2 = Q2n1;
+
+			mf1_n = a;
+			mf2_n = b;
+			Q1n1 = c;
+			Q2n1 = d;
+		}
+
+
+		if( fclose (fp) != 0)
+			Perror("fclose");
+	}
+
+        if ( (fp = fopen("COORDS","aw")) == NULL)
+           Perror("fopen");
 /*
  * open socket - because we use more then just send - receive scenario
  * we need to open socket manualy and used Send_receive function with hostname = NULL, ie. as server
