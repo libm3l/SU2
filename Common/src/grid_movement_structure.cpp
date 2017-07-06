@@ -2575,7 +2575,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 	su2double rotMatrixo[3][3] = {{0.0,0.0,0.0}, {0.0,0.0,0.0}, {0.0,0.0,0.0}};
 	su2double dtheta, dphi, dpsi, cosTheta, sinTheta, cosThetao, sinThetao,sinPsio,cosPsio;
 	su2double cosPhi, sinPhi,cosPhio, sinPhio, cosPsi, sinPsi,x,xn,y,z,yn,xno,yno;
-	su2double rotXold, rotYold, rotZold,dthetao, dphio, dpsio;
+	su2double rotXold, rotYold, rotZold,dthetao, dphio, dpsio, dx, dy, dz, dxo,dyo,dzo;
 
 	/*--- Problem dimension  ---*/
 
@@ -2588,9 +2588,6 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
  * this function is modified to fit the BSCW wing which has a fixed rotation around 
  * 0.2023  0   0 point (units are meters)
  */
-
-//      cout << "Angles are: " << motion_data->angles[0] << ", " << motion_data->angles[1]<< ", " << motion_data->angles[2]<< endl;
-//      cout << "Center of rotation is: " << motion_data->rotcenter[0] << ", " << motion_data->rotcenter[1]<< ", " << motion_data->rotcenter[2]<< endl;
 
 /*  psi   - yaw
  *  theta - pitch

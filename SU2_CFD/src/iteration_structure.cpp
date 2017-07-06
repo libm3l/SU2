@@ -262,6 +262,7 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
   /*
   * motion prescribed by external solver, get the previous iteration 
   * rotational angles, displacement and rotation center
+  * before getting new values, save old ones
   */
       p_6DOFdata_old->angles[0] = config_container[val_iZone]->GetYaw(val_iZone);
       p_6DOFdata_old->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
@@ -314,11 +315,6 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
       config_container[val_iZone]->SetYaw(val_iZone,p_6DOFdata->angles[0]);
       config_container[val_iZone]->SetPitch(val_iZone,p_6DOFdata->angles[1]);
       config_container[val_iZone]->SetRoll(val_iZone,p_6DOFdata->angles[2]);
-      
-//      printf(" Rotation centers are %lf %lf %lf\n", p_6DOFdata->rotcenter[0], p_6DOFdata->rotcenter[1], p_6DOFdata->rotcenter[2]);
-//      printf(" Rotation centers are %lf %lf %lf\n", p_6DOFdata->angles[0], p_6DOFdata->angles[1], p_6DOFdata->angles[2]);
-      
-//      if (rank == MASTER_NODE) cout << endl << " Moving mesh" << endl;
             
       if(ExtIter == 0)
 /*
