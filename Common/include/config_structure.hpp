@@ -742,7 +742,10 @@ private:
   *Angle_Roll,          /*!< \brief Rolling angle. */
   *Angle_Pitch,           /*!< \brief Pitching angle. */
   *Angle_Yaw,           /*!< \brief Plunging angle. */  
-  *MoveMotion_Origin;         /*!< \brief Keeps track if we should move moment origin. */
+  *MoveMotion_Origin,         /*!< \brief Keeps track if we should move moment origin. */
+  *Translation_X,        /*!< \brief Translational of the mesh in the x-direction. */
+  *Translation_Y,        /*!< \brief Translational of the mesh in the y-direction. */
+  *Translation_Z;        /*!< \brief Translational of the mesh in the z-direction. */
 
   unsigned short nMotion_Origin_X,    /*!< \brief Number of X-coordinate mesh motion origins. */
   nMotion_Origin_Y,           /*!< \brief Number of Y-coordinate mesh motion origins. */
@@ -772,7 +775,10 @@ private:
   nMoveMotion_Origin,         /*!< \brief Number of motion origins. */
   nAngle_Yaw,           /*!< \brief Number of yaw angles */
   nAngle_Pitch,           /*!< \brief Number of pitch angles */
-  nAngle_Roll;           /*!< \brief Number of roll angles in */
+  nAngle_Roll,           /*!< \brief Number of roll angles in */
+  nTranslation_X,           /*!< \brief Number of X translations */
+  nTranslation_Y,           /*!< \brief Number of Y translations */
+  nTranslation_Z;           /*!< \brief Number of Z translations */
 
   vector<vector<vector<su2double> > > Aeroelastic_np1, /*!< \brief Aeroelastic solution at time level n+1. */
   Aeroelastic_n,              /*!< \brief Aeroelastic solution at time level n. */
@@ -2416,6 +2422,30 @@ public:
    * \return Restart iteration number for dynamic structural simulations.
    */
   long GetDyn_RestartIter(void);
+
+	void SetTranslation_X(unsigned short val_iZone, su2double val_origin);
+
+	/*!
+	 * \brief Set translation in X direction.
+	 * \param[in] val_iZone - Number for the current zone in the mesh (each zone has independent motion).
+	 * \return X direction.
+	 */
+	
+	void SetTranslation_Y(unsigned short val_iZone, su2double val_origin);
+
+	/*!
+	 * \brief Set translation in Y direction.
+	 * \param[in] val_iZone - Number for the current zone in the mesh (each zone has independent motion).
+	 * \return Y direction.
+	 */
+	
+	void SetTranslation_Z(unsigned short val_iZone, su2double val_origin);
+
+	/*!
+	 * \brief Set translation in Z direction.
+	 * \param[in] val_iZone - Number for the current zone in the mesh (each zone has independent motion).
+	 * \return Z direction.
+	 */
 	
 	void SetRoll(unsigned short val_iZone, su2double val_origin);
 
@@ -2458,6 +2488,36 @@ public:
 	 */
 	
 	su2double GetYaw(unsigned short val_iZone);
+	/*!
+	 * \brief Get yaw angle
+	 * \param[in] val_iZone - Number for the current zone in the mesh (each zone has independent motion).
+	 * \return Roll angle.
+	 */
+
+
+	su2double GetTranslation_X(unsigned short val_iZone);
+
+	/*!
+	 * \brief Get X translation
+	 * \param[in] val_iZone - Number for the current zone in the mesh (each zone has independent motion).
+	 * \return X direction.
+	 */
+	
+	su2double GetTranslation_Y(unsigned short val_iZone);
+
+	/*!
+	 * \brief Get Y translation
+	 * \param[in] val_iZone - Number for the current zone in the mesh (each zone has independent motion).
+	 * \return Y direction.
+	 */
+	
+	su2double GetTranslation_Z(unsigned short val_iZone);
+	/*!
+	 * \brief Get Z translation
+	 * \param[in] val_iZone - Number for the current zone in the mesh (each zone has independent motion).
+	 * \return Z direction.
+	 */
+
     
   unsigned short GetnTimeInstances(void);
   

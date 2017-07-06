@@ -428,6 +428,7 @@ void CConfig::SetPointersNull(void) {
   RefOriginMoment_X   = NULL;    RefOriginMoment_Y   = NULL;    RefOriginMoment_Z   = NULL;
   MoveMotion_Origin   = NULL;    
   Angle_Roll          = NULL;    Angle_Pitch         = NULL;    Angle_Yaw           = NULL;
+  Translation_X       = NULL;    Translation_Y       = NULL;    Translation_Z       = NULL;
   Periodic_Translate  = NULL;    Periodic_Rotation 	 = NULL;    Periodic_Center	    = NULL;
   Periodic_Translation= NULL;    Periodic_RotAngles	 = NULL;    Periodic_RotCenter  = NULL;
 
@@ -1313,6 +1314,9 @@ void CConfig::SetConfig_Options(unsigned short val_iZone, unsigned short val_nZo
   addDoubleListOption("ANGLE_YAW", nAngle_Yaw, Angle_Yaw);
   addDoubleListOption("ANGLE_ROLL", nAngle_Roll, Angle_Roll);
   addDoubleListOption("ANGLE_PITCH", nAngle_Pitch, Angle_Pitch);
+  addDoubleListOption("TRANSLATION_X", nTranslation_X, Translation_X);
+  addDoubleListOption("TRANSLATION_Y", nTranslation_Y, Translation_Y);
+  addDoubleListOption("TRANSLATION_Z", nTranslation_Z, Translation_Z);
   /* DESCRIPTION: Translational velocity vector (m/s) in the x, y, & z directions (RIGID_MOTION only) */
   addDoubleListOption("TRANSLATION_RATE_X", nTranslation_Rate_X, Translation_Rate_X);
   /* DESCRIPTION: Translational velocity vector (m/s) in the x, y, & z directions (RIGID_MOTION only) */
@@ -2313,7 +2317,7 @@ void CConfig::SetPostprocessing(unsigned short val_software, unsigned short val_
     Angle_Yaw = new su2double[nMoving];
     for (iZone = 0; iZone < nMoving; iZone++ )
       Angle_Yaw[iZone] = 0.0;
-  } else {
+    } else {
     if (Grid_Movement && (nAngle_Yaw != nGridMovement)) {
       cout << "Length of nAngle_Yaw  must match GRID_MOVEMENT_KIND!!" << endl;
       exit(EXIT_FAILURE);
@@ -2354,6 +2358,41 @@ void CConfig::SetPostprocessing(unsigned short val_software, unsigned short val_
   }
   
   /*--- Translation: ---*/
+
+    if (Translation_X == NULL) {
+    Translation_X = new su2double[nMoving];
+    for (iZone = 0; iZone < nMoving; iZone++ )
+      Translation_X[iZone] = 0.0;
+    } else {
+    if (Grid_Movement && (nTranslation_X != nGridMovement)) {
+      cout << "Length of nTranslation_X  must match GRID_MOVEMENT_KIND!!" << endl;
+      exit(EXIT_FAILURE);
+    }
+  }
+
+    if (Translation_Y == NULL) {
+    Translation_Y = new su2double[nMoving];
+    for (iZone = 0; iZone < nMoving; iZone++ )
+      Translation_Y[iZone] = 0.0;
+    } else {
+    if (Grid_Movement && (nTranslation_Y != nGridMovement)) {
+      cout << "Length of nTranslation_Y  must match GRID_MOVEMENT_KIND!!" << endl;
+      exit(EXIT_FAILURE);
+    }
+  }
+
+    if (Translation_Z == NULL) {
+    Translation_Z = new su2double[nMoving];
+    for (iZone = 0; iZone < nMoving; iZone++ )
+      Translation_Z[iZone] = 0.0;
+    } else {
+    if (Grid_Movement && (nTranslation_Z != nGridMovement)) {
+      cout << "Length of nTranslation_Z  must match GRID_MOVEMENT_KIND!!" << endl;
+      exit(EXIT_FAILURE);
+    }
+  }
+
+
   
   if (Translation_Rate_X == NULL) {
     Translation_Rate_X = new su2double[nMoving];

@@ -307,7 +307,8 @@ int main(int argc, char *argv[])
 	if(m3l_Umount(&Gnode) != 1)
 		Perror("m3l_Umount");
 	if(m3l_Umount(&Snode) != 1)
-		Perror("m3l_Umount");/* 
+		Perror("m3l_Umount");
+/* 
  * close socket
  */
 	if( close(sockfd) == -1)

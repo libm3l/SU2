@@ -2598,10 +2598,18 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
   dphi   = motion_data->angles[1]*3.1415926/180.;  // roll
   dpsi   = motion_data->angles[0]*3.1415926/180.;  // yaw  
 
+  dx   = motion_data->transvec[0];
+  dy   = motion_data->transvec[1];
+  dz   = motion_data->transvec[2];  
+
   if(nDim == 3){
      dthetao    = -motion_data_old->angles[2]*3.1415926/180.;  // pitch
      dphio      = -motion_data_old->angles[1]*3.1415926/180.;  // roll
      dpsio      = -motion_data_old->angles[0]*3.1415926/180.;  // yaw
+
+     dxo   = motion_data->transvec[0];
+     dyo   = motion_data->transvec[1];
+     dzo   = motion_data->transvec[2]; 
      
      rotXold = motion_data_old->rotcenter[0];
      rotYold = motion_data_old->rotcenter[1];
@@ -2610,6 +2618,9 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
      rotXold = 0.4046/2.;
      rotYold = 0.;
      rotZold = 0.;
+
+     dxo = 0;
+     dyo = 0;
 	
      /* Compute sines/cosines. ---*/
    
@@ -2655,9 +2666,9 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 		Coord   = geometry->node[iPoint]->GetCoord(); 
    
     /*--- Calculate non-dim. position from rotation center ---*/
-		x = (Coord[0]-rotXold);
-		y = (Coord[1]-rotYold);
-		z = (Coord[2]-rotZold);
+		x = (Coord[0]-rotXold-dxo);
+		y = (Coord[1]-rotYold-dyo);
+		z = (Coord[2]-rotZold-dzo);
 			
   /*--- Compute transformed point coordinates ---*/
 		r[0] = rotMatrixo[0][0]*x 
@@ -2687,18 +2698,19 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
     
     /*--- Store new node location & grid velocity. Add center---*/
     
-//		geometry->node[iPoint]->SetCoord(0, rotCoord[0] + motion_data->rotcenter[0]);      
-//		geometry->node[iPoint]->SetCoord(1, rotCoord[1] + motion_data->rotcenter[1]);      
-//		geometry->node[iPoint]->SetCoord(2, rotCoord[2] + motion_data->rotcenter[2]); 
+//		geometry->node[iPoint]->SetCoord(0, rotCoord[0] + motion_data->rotcenter[0]+dx);      
+//		geometry->node[iPoint]->SetCoord(1, rotCoord[1] + motion_data->rotcenter[1]+dy);      
+//		geometry->node[iPoint]->SetCoord(2, rotCoord[2] + motion_data->rotcenter[2]+dz); 
 
-		geometry->node[iPoint]->SetCoord(0, rotCoord[0] + 0.4046/2.);      
-		geometry->node[iPoint]->SetCoord(1, rotCoord[1]);      
-		geometry->node[iPoint]->SetCoord(2, rotCoord[2]);      
+		geometry->node[iPoint]->SetCoord(0, rotCoord[0] + 0.4046/2.+dx);      
+		geometry->node[iPoint]->SetCoord(1, rotCoord[1]+dy);      
+		geometry->node[iPoint]->SetCoord(2, rotCoord[2]+dz);      
 	}
   }
   else
   {
            dpsio   = motion_data_old->angles[0]*3.1415926/180.;  // pitch
+           dyo     = motion_data_old->transvec[2];
 
            rotXold = 0.44046/2.;  //motion_data_old->rotcenter[0];
            rotYold = 0.;                //motion_data_old->rotcenter[1];
@@ -2721,10 +2733,10 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 			Coord   = geometry->node[iPoint]->GetCoord(); 
    
     /*--- Calculate non-dim. position from rotation center ---*/
-// 			x = (Coord[0]-rotXold);
-// 			y = (Coord[1]-rotYold);
+// 			x = (Coord[0]-rotXold-dxo);
+// 			y = (Coord[1]-rotYold-dyo);
 			x = (Coord[0]-0.4046/2.);
-			y = (Coord[1]);
+			y = (Coord[1]-dyo);
   
     /*--- Compute transformed point coordinates ---*/
 			xno =  cosPsio*x  + sinPsio*y ;
@@ -2735,10 +2747,11 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
     /*--- Store new node location & grid velocity. Add center. 
      Do not store the grid velocity if this is an adjoint calculation.---*/
     
-/*			geometry->node[iPoint]->SetCoord(0, xn + motion_data->rotcenter[0]);      
-			geometry->node[iPoint]->SetCoord(1, yn + motion_data->rotcenter[1]); */  
+/*			geometry->node[iPoint]->SetCoord(0, xn + motion_data->rotcenter[0]+dx);      
+			geometry->node[iPoint]->SetCoord(1, yn + motion_data->rotcenter[1]+dy); */  
 
-           xn = xn +0.4046/2.;   
+                        xn = xn +0.4046/2.;   
+                        yn = yn + dz;
 
  			geometry->node[iPoint]->SetCoord(0, xn);      
  			geometry->node[iPoint]->SetCoord(1, yn); 
@@ -2760,8 +2773,9 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 // 			geometry->node[iPoint]->SetCoord(0, xn + motion_data->rotcenter[0]);      
 // 			geometry->node[iPoint]->SetCoord(1, yn + motion_data->rotcenter[1]);
 
-            xn = xn +0.4046/2.;   
-            geometry->node[iPoint]->SetCoord(0, xn);      
+            		xn = xn +0.4046/2.; 
+                        yn = yn + dz;  
+            		geometry->node[iPoint]->SetCoord(0, xn);      
  			geometry->node[iPoint]->SetCoord(1, yn); 
 		}
 	}
