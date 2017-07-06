@@ -754,18 +754,18 @@ void CFluidIteration::Iterate(COutput *output,
   
   /*--- Call Dynamic mesh update if AEROELASTIC motion was specified ---*/
   
-//   if ((config_container[val_iZone]->GetGrid_Movement()) && (config_container[val_iZone]->GetAeroelastic_Simulation()) && unsteady) {
-//       
-//     SetGrid_Movement(geometry_container, surface_movement, grid_movement, FFDBox, solver_container, config_container, val_iZone, IntIter, ExtIter);
-//     
-//     /*--- Apply a Wind Gust ---*/
-//     
-//     if (config_container[val_iZone]->GetWind_Gust()) {
-//       if (IntIter % config_container[val_iZone]->GetAeroelasticIter() == 0 && IntIter != 0)
-//         SetWind_GustField(config_container[val_iZone], geometry_container[val_iZone], solver_container[val_iZone]);
-//     }
-//     
-//   }
+   if ((config_container[val_iZone]->GetGrid_Movement()) && (config_container[val_iZone]->GetAeroelastic_Simulation()) && unsteady) {
+       
+     SetGrid_Movement(geometry_container, surface_movement, grid_movement, FFDBox, solver_container, config_container, val_iZone, IntIter, ExtIter);
+     
+     /*--- Apply a Wind Gust ---*/
+     
+     if (config_container[val_iZone]->GetWind_Gust()) {
+       if (IntIter % config_container[val_iZone]->GetAeroelasticIter() == 0 && IntIter != 0)
+         SetWind_GustField(config_container[val_iZone], geometry_container[val_iZone], solver_container[val_iZone]);
+     }
+     
+   }
 /*
  * ==========================  end of BSCW wing test case modification ======================
  */
