@@ -47,8 +47,8 @@
  */
 
 
-#include "/home/jiraseka/Cprograms/Sources/libm3l/Source/data_util/libm3l.h"
-#include "/home/jiraseka/Cprograms/Sources/lsipdx/Source/lsipdx.h"
+#include "/home/jka/Cprograms/Sources/libm3l/Source/data_util/libm3l.h"
+#include "/home/jka/Cprograms/Sources/lsipdx/Source/lsipdx.h"
 
 int main(int argc, char *argv[])
 {
@@ -245,6 +245,13 @@ int main(int argc, char *argv[])
  */
 	mf1_n = ModalForce[0];
 	mf2_n = ModalForce[1];
+    
+    if(niter ==0  && restart == 0){
+   printf(" Nullifying \n");
+    mf1_n=0;
+    mf2_n=0;
+    }
+
 /*
  * get new modal coordinates
  */
