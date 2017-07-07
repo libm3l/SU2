@@ -247,9 +247,14 @@ int main(int argc, char *argv[])
 	mf2_n = ModalForce[1];
     
     if(niter ==0  && restart == 0){
-   printf(" Nullifying \n");
-    mf1_n=0;
-    mf2_n=0;
+    
+       if( fclose (fp) != 0)
+		Perror("fclose");
+       if ( (fp = fopen("COORDS","w")) == NULL)
+           Perror("fopen");
+       printf(" Nullifying \n");
+       mf1_n=0;
+       mf2_n=0;
     }
 
 /*
