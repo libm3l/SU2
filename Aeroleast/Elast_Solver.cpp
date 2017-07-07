@@ -47,8 +47,11 @@
  */
 
 
-#include "/home/jiraseka/Cprograms/Sources/libm3l/Source/data_util//libm3l.h"
-#include "/home/jiraseka/Cprograms/Sources/lsipdx/Source/lsipdx.h"
+//#include "/home/jiraseka/Cprograms/Sources/libm3l/Source/data_util//libm3l.h"
+//#include "/home/jiraseka/Cprograms/Sources/lsipdx/Source/lsipdx.h"
+
+#include "Elast_Solver.h"
+
 
 int main(int argc, char *argv[])
 {
