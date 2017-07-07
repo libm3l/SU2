@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
 	node_t *Gnode=NULL, *Snode=NULL, *FoundNode=NULL, *TmpNode=NULL;
 	size_t i, niter, dim[1];
 
-	lmint_t sockfd, portno;
+	lmint_t sockfd, portno, restart;
 
         socklen_t clilen;
         struct sockaddr_in cli_addr;
@@ -66,14 +66,14 @@ int main(int argc, char *argv[])
 	lmdouble_t *tmpfloat, *time, sign, *ModalForce, f1, f2, w1, w2, md1, md2, mo1, mo2;
         lmdouble_t A11,A12,A13,A21,A22,A23,mf1_n,mf1_n1,mf1_n2,mf2_n,mf2_n1,mf2_n2;
 	lmdouble_t psi,theta,phi,*dt,t,Ytranslation;
-        lmdouble_t Q1n3, Q1n2, Q1n1, Q2n3, Q2n2, Q2n1; 
+        lmdouble_t Q1n3, Q1n2, Q1n1, Q2n3, Q2n2, Q2n1;
+	lmdouble_t a,b,c,d,timef, count;
 	
 	find_t *SFounds;
 	
 	opts_t opts, *Popts_1;
 	
-	FILE *fp;
-	
+	FILE *fp;	
 	
 	client_fce_struct_t InpPar, *PInpPar;
 
@@ -87,6 +87,7 @@ int main(int argc, char *argv[])
 	}
  	portno = atoi(argv[2]);
 
+
         mf1_n2  = 0;
         mf1_n1  = 0;
         mf2_n2  = 0;
@@ -95,6 +96,41 @@ int main(int argc, char *argv[])
         Q1n2 = 0;
         Q2n3 = 0;
         Q2n2 = 0;
+
+        printf("Restart [1] or not [0]\n");
+        scanf("%d", &restart);
+
+        if(restart == 1){
+
+		if ( (fp = fopen("COORDS","r")) == NULL)
+		   Perror("fopen");
+
+
+		while (fscanf(fp,"%lf %lf %lf %lf %lf", &timef, &a, &b, &c, &d) != EOF) {
+
+			mf1_n2  = mf1_n1;
+			mf1_n1  = mf1_n;
+			mf2_n2  = mf2_n1;
+			mf2_n1  = mf2_n;
+
+			Q1n3 = Q1n2;
+			Q1n2 = Q1n1;
+			Q2n3 = Q2n2;
+			Q2n2 = Q2n1;
+
+			mf1_n = a;
+			mf2_n = b;
+			Q1n1 = c;
+			Q2n1 = d;
+		}
+
+
+		if( fclose (fp) != 0)
+			Perror("fclose");
+	}
+
+        if ( (fp = fopen("COORDS","aw")) == NULL)
+           Perror("fopen");
 /*
  * open socket - because we use more then just send - receive scenario
  * we need to open socket manualy and used Send_receive function with hostname = NULL, ie. as server
@@ -118,8 +154,6 @@ int main(int argc, char *argv[])
 			Error("client_sender: Error when opening socket");
 
 		Gnode = client_receiver(sockfd, PInpPar, (opts_t *)NULL, (opts_t *)NULL);
-		
-		printf(" Data from SU2 received\n");
 	
 // 		if(m3l_Cat(Gnode, "--all", "-P", "-L",  "*",   (char *)NULL) != 0)
 // 			Error("CatData");
@@ -211,13 +245,6 @@ int main(int argc, char *argv[])
  */
 	mf1_n = ModalForce[0];
 	mf2_n = ModalForce[1];
-
-/*        if(niter < 3){
-          mf1_n2  = mf1_n;
-          mf1_n1  = mf1_n;
-          mf2_n2  = mf2_n;
-          mf2_n1  = mf2_n;
-        }*/
 /*
  * get new modal coordinates
  */
@@ -230,6 +257,9 @@ int main(int argc, char *argv[])
  * shift solution
  */
      if( strncmp(action, "shift", 5) == 0){
+
+        fprintf(fp, "%lf %lf %lf %lf %lf\n", *time, Q2n1*27.264, Q1n1*0.1066528,mf1_n,mf2_n);
+        fflush(fp);
 
         ++niter;
 
@@ -311,7 +341,8 @@ int main(int argc, char *argv[])
 	if(m3l_Umount(&Gnode) != 1)
 		Perror("m3l_Umount");
 	if(m3l_Umount(&Snode) != 1)
-		Perror("m3l_Umount");/* 
+		Perror("m3l_Umount");
+/* 
  * close socket
  */
 	if( close(sockfd) == -1)
@@ -320,6 +351,8 @@ int main(int argc, char *argv[])
 
  	}
 
+	if( fclose (fp) != 0)
+		Perror("fclose");
 
      return 0; 
 }

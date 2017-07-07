@@ -733,6 +733,20 @@ inline su2double CConfig::GetTranslation_Rate_Y(unsigned short val_iZone) { retu
 
 inline su2double CConfig::GetTranslation_Rate_Z(unsigned short val_iZone) { return  Translation_Rate_Z[val_iZone]; }
 
+
+inline su2double CConfig::GetTranslation_X(unsigned short val_iZone) { return  Translation_X[val_iZone]; }
+
+inline su2double CConfig::GetTranslation_Y(unsigned short val_iZone) { return  Translation_Y[val_iZone]; }
+
+inline su2double CConfig::GetTranslation_Z(unsigned short val_iZone) { return  Translation_Z[val_iZone]; }
+
+inline void CConfig::SetTranslation_X(unsigned short val_iZone, su2double val_origin) { Translation_X[val_iZone] = val_origin; }
+
+inline void CConfig::SetTranslation_Y(unsigned short val_iZone, su2double val_origin) { Translation_Y[val_iZone] = val_origin; }
+
+inline void CConfig::SetTranslation_Z(unsigned short val_iZone, su2double val_origin) { Translation_Z[val_iZone] = val_origin; }
+
+
 inline su2double CConfig::GetRotation_Rate_X(unsigned short val_iZone) { return  Rotation_Rate_X[val_iZone]; }
 
 inline su2double CConfig::GetRotation_Rate_Y(unsigned short val_iZone) { return  Rotation_Rate_Y[val_iZone]; }

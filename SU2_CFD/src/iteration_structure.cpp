@@ -83,7 +83,7 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
    so that the meshes are positioned correctly for each instance. ---*/
   if (harmonic_balance) {
     ExtIter = val_iZone;
-    Kind_Grid_Movement = config_container[val_iZone]->GetKind_GridMovement(ZONE_0);
+    
   }
 
   int rank = MASTER_NODE;
@@ -262,10 +262,15 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
   /*
   * motion prescribed by external solver, get the previous iteration 
   * rotational angles, displacement and rotation center
+  * before getting new values, save old ones
   */
       p_6DOFdata_old->angles[0] = config_container[val_iZone]->GetYaw(val_iZone);
       p_6DOFdata_old->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
       p_6DOFdata_old->angles[2] = config_container[val_iZone]->GetRoll(val_iZone);
+
+      p_6DOFdata_old->transvec[0] = config_container[val_iZone]->GetTranslation_X(val_iZone);
+      p_6DOFdata_old->transvec[1] = config_container[val_iZone]->GetTranslation_Y(val_iZone);
+      p_6DOFdata_old->transvec[2] = config_container[val_iZone]->GetTranslation_Z(val_iZone);
       
       p_6DOFdata_old->rotcenter[0] = config_container[val_iZone]->GetMotion_Origin_X(val_iZone);
       p_6DOFdata_old->rotcenter[1] = config_container[val_iZone]->GetMotion_Origin_Y(val_iZone);
@@ -314,11 +319,10 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
       config_container[val_iZone]->SetYaw(val_iZone,p_6DOFdata->angles[0]);
       config_container[val_iZone]->SetPitch(val_iZone,p_6DOFdata->angles[1]);
       config_container[val_iZone]->SetRoll(val_iZone,p_6DOFdata->angles[2]);
-      
-//      printf(" Rotation centers are %lf %lf %lf\n", p_6DOFdata->rotcenter[0], p_6DOFdata->rotcenter[1], p_6DOFdata->rotcenter[2]);
-//      printf(" Rotation centers are %lf %lf %lf\n", p_6DOFdata->angles[0], p_6DOFdata->angles[1], p_6DOFdata->angles[2]);
-      
-//      if (rank == MASTER_NODE) cout << endl << " Moving mesh" << endl;
+
+      config_container[val_iZone]->SetTranslation_X(val_iZone,p_6DOFdata->transvec[0]);
+      config_container[val_iZone]->SetTranslation_Y(val_iZone,p_6DOFdata->transvec[1]);
+      config_container[val_iZone]->SetTranslation_Z(val_iZone,p_6DOFdata->transvec[2]);
             
       if(ExtIter == 0)
 /*
@@ -676,9 +680,16 @@ void CFluidIteration::Iterate(COutput *output,
   * motion prescribed by external solver, get the previous iteration 
   * rotational angles, displacement and rotation center
   */
+      if( config_container[val_iZone]->GetKind_GridMovement(ZONE_0) == EXTERNAL){
+
+      
       p_6DOFdata_old->angles[0] = config_container[val_iZone]->GetYaw(val_iZone);
       p_6DOFdata_old->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
       p_6DOFdata_old->angles[2] = config_container[val_iZone]->GetRoll(val_iZone);
+
+      p_6DOFdata_old->transvec[0] = config_container[val_iZone]->GetTranslation_X(val_iZone);
+      p_6DOFdata_old->transvec[1] = config_container[val_iZone]->GetTranslation_Y(val_iZone);
+      p_6DOFdata_old->transvec[2] = config_container[val_iZone]->GetTranslation_Z(val_iZone);
       
       p_6DOFdata_old->rotcenter[0] = config_container[val_iZone]->GetMotion_Origin_X(val_iZone);
       p_6DOFdata_old->rotcenter[1] = config_container[val_iZone]->GetMotion_Origin_Y(val_iZone);
@@ -721,11 +732,11 @@ void CFluidIteration::Iterate(COutput *output,
       config_container[val_iZone]->SetYaw(val_iZone,p_6DOFdata->angles[0]);
       config_container[val_iZone]->SetPitch(val_iZone,p_6DOFdata->angles[1]);
       config_container[val_iZone]->SetRoll(val_iZone,p_6DOFdata->angles[2]);
-      
-//       printf(" Rotation centers are %lf %lf %lf\n", p_6DOFdata->rotcenter[0], p_6DOFdata->rotcenter[1], p_6DOFdata->rotcenter[2]);
-//       printf(" Rotation angles  are %lf %lf %lf\n", p_6DOFdata->angles[0], p_6DOFdata->angles[1], p_6DOFdata->angles[2]);
-      
-//      if (rank == MASTER_NODE) cout << endl << " Moving mesh" << endl;
+
+      config_container[val_iZone]->SetTranslation_X(val_iZone,p_6DOFdata->transvec[0]);
+      config_container[val_iZone]->SetTranslation_Y(val_iZone,p_6DOFdata->transvec[1]);
+      config_container[val_iZone]->SetTranslation_Z(val_iZone,p_6DOFdata->transvec[2]);
+
             
       if(ExtIter == 0)
 /*
@@ -743,21 +754,23 @@ void CFluidIteration::Iterate(COutput *output,
        including computing the grid velocities on the coarser levels. ---*/
       
       grid_movement[val_iZone]->UpdateMultiGrid(geometry_container[val_iZone], config_container[val_iZone]);
+
+}
   
   /*--- Call Dynamic mesh update if AEROELASTIC motion was specified ---*/
   
-//   if ((config_container[val_iZone]->GetGrid_Movement()) && (config_container[val_iZone]->GetAeroelastic_Simulation()) && unsteady) {
-//       
-//     SetGrid_Movement(geometry_container, surface_movement, grid_movement, FFDBox, solver_container, config_container, val_iZone, IntIter, ExtIter);
-//     
-//     /*--- Apply a Wind Gust ---*/
-//     
-//     if (config_container[val_iZone]->GetWind_Gust()) {
-//       if (IntIter % config_container[val_iZone]->GetAeroelasticIter() == 0 && IntIter != 0)
-//         SetWind_GustField(config_container[val_iZone], geometry_container[val_iZone], solver_container[val_iZone]);
-//     }
-//     
-//   }
+   if ((config_container[val_iZone]->GetGrid_Movement()) && (config_container[val_iZone]->GetAeroelastic_Simulation()) && unsteady) {
+       
+     SetGrid_Movement(geometry_container, surface_movement, grid_movement, FFDBox, solver_container, config_container, val_iZone, IntIter, ExtIter);
+     
+     /*--- Apply a Wind Gust ---*/
+     
+     if (config_container[val_iZone]->GetWind_Gust()) {
+       if (IntIter % config_container[val_iZone]->GetAeroelasticIter() == 0 && IntIter != 0)
+         SetWind_GustField(config_container[val_iZone], geometry_container[val_iZone], solver_container[val_iZone]);
+     }
+     
+   }
 /*
  * ==========================  end of BSCW wing test case modification ======================
  */
@@ -2821,6 +2834,38 @@ int communicate(CConfig *config, CSolver ****solver_container, d6dof_t *angle, i
 	{
 		Error("socket_SU2_2_Simul: Angles not found\n");
 	}
+
+
+/*
+ * find Translation - rotation matrix and copy the values to Edge allocated memory
+ */
+	if( (SFounds = m3l_Locate(Gnode, "/SIM_2_CFD/TransVec", "/*/*",  (char *)NULL)) != NULL){
+
+		if( m3l_get_Found_number(SFounds) != 1)
+			Error("socket_SU2_2_Simul: More then one TransVec data set found");
+/* 
+ * pointer to list of found nodes
+ */
+		if( (FoundNode = m3l_get_Found_node(SFounds, 0)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find 1st data pointer");
+		if( (tot_dim = m3l_get_List_totdim(FoundNode)) != 3)
+			Error("socket_SU2_2_Simul: Wrong dimensions of Angles array");
+		if( (tmpfloat = (double *)m3l_get_data_pointer(FoundNode)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find TransVec data pointer");
+			angle->transvec[0] = tmpfloat[0];
+			angle->transvec[1] = tmpfloat[1];
+			angle->transvec[2] = tmpfloat[2];
+/* 
+ * free memory allocated in m3l_Locate
+ */
+		m3l_DestroyFound(&SFounds);
+	}
+	else
+	{
+		Error("socket_SU2_2_Simul: TransVec not found\n");
+	}
+
+
 /*
  * find center of rotation
  */
@@ -3022,6 +3067,9 @@ int communicateBSCW(CConfig *config, CSolver ****solver_container, d6dof_t *angl
  */
 	if( close(sockfd) == -1)
 		Perror("socket_SU2_2_Str: close");
+
+// 		if(m3l_Cat(Gnode, "--detailed", "-P", "-L",  "*",   (char *)NULL) != 0)
+// 		Error("CatData");
 /*
  * find Angles - rotation matrix and copy the values to Edge allocated memory
  */
@@ -3050,6 +3098,38 @@ int communicateBSCW(CConfig *config, CSolver ****solver_container, d6dof_t *angl
 	{
 		Error("socket_SU2_2_Str: Angles not found\n");
 	}
+
+/*
+ * find Translation - rotation matrix and copy the values to Edge allocated memory
+ */
+	if( (SFounds = m3l_Locate(Gnode, "/STR_2_CFD/TransVec", "/*/*",  (char *)NULL)) != NULL){
+
+		if( m3l_get_Found_number(SFounds) != 1)
+			Error("socket_SU2_2_Simul: More then one TransVec data set found");
+/* 
+ * pointer to list of found nodes
+ */
+		if( (FoundNode = m3l_get_Found_node(SFounds, 0)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find 1st data pointer");
+		if( (tot_dim = m3l_get_List_totdim(FoundNode)) != 3)
+			Error("socket_SU2_2_Simul: Wrong dimensions of Angles array");
+		if( (tmpfloat = (double *)m3l_get_data_pointer(FoundNode)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find TransVec data pointer");
+			angle->transvec[0] = tmpfloat[0];
+			angle->transvec[1] = tmpfloat[1];
+			angle->transvec[2] = tmpfloat[2];
+/* 
+ * free memory allocated in m3l_Locate
+ */
+		m3l_DestroyFound(&SFounds);
+	}
+	else
+	{
+		Error("socket_SU2_2_Simul: TransVec not found\n");
+	}
+
+
+
 /*
  * find center of rotation
  */
