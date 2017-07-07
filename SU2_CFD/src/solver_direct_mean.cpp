@@ -64,6 +64,8 @@ CEulerSolver::CEulerSolver(void) : CSolver() {
   Surface_CFx = NULL; Surface_CFy = NULL; Surface_CFz = NULL;
   Surface_CMx = NULL; Surface_CMy = NULL; Surface_CMz = NULL;
   
+  Surface_ModalF1 = NULL; Surface_ModalF2 = NULL; 
+  
   /*--- Rotorcraft simulation array initialization ---*/
   
   CMerit_Inv = NULL;  CT_Inv = NULL;  CQ_Inv = NULL;
@@ -248,6 +250,8 @@ CEulerSolver::CEulerSolver(CGeometry *geometry, CConfig *config, unsigned short 
   Surface_CL = NULL; Surface_CD = NULL; Surface_CSF = NULL; Surface_CEff = NULL;
   Surface_CFx = NULL; Surface_CFy = NULL; Surface_CFz = NULL;
   Surface_CMx = NULL; Surface_CMy = NULL; Surface_CMz = NULL;
+  
+  Surface_ModalF1 = NULL;    Surface_ModalF2 = NULL; 
 
   /*--- Rotorcraft simulation array initialization ---*/
 
@@ -5210,7 +5214,7 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
   
 #ifdef HAVE_MPI
   su2double MyAllBound_CD_Inv, MyAllBound_CL_Inv, MyAllBound_CSF_Inv, MyAllBound_CMx_Inv, MyAllBound_CMy_Inv, MyAllBound_CMz_Inv, MyAllBound_CFx_Inv, MyAllBound_CFy_Inv, MyAllBound_CFz_Inv, MyAllBound_CT_Inv, MyAllBound_CQ_Inv, MyAllBound_CNearFieldOF_Inv, *MySurface_CL_Inv = NULL, *MySurface_CD_Inv = NULL, *MySurface_CSF_Inv = NULL, *MySurface_CEff_Inv = NULL, *MySurface_CFx_Inv = NULL, *MySurface_CFy_Inv = NULL, *MySurface_CFz_Inv = NULL, *MySurface_CMx_Inv = NULL, *MySurface_CMy_Inv = NULL, *MySurface_CMz_Inv = NULL,
-    MyAllBound_ModalF1, MyAllBound_ModalF2; 
+   MyAllBound_ModalF1, MyAllBound_ModalF2, *MySurface_ModalF1 = NULL, *MySurface_ModalF2 = NULL ; 
 #endif
   
   su2double Alpha           = config->GetAoA()*PI_NUMBER/180.0;
@@ -5256,9 +5260,9 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
   AllBound_CFx_Inv = 0.0;          AllBound_CFy_Inv = 0.0;   AllBound_CFz_Inv = 0.0;
   AllBound_CT_Inv = 0.0;           AllBound_CQ_Inv = 0.0;    AllBound_CMerit_Inv = 0.0;
   AllBound_CNearFieldOF_Inv = 0.0; AllBound_CEff_Inv = 0.0; 
-   MyAllBound_ModalF1 = 0.0; MyAllBound_ModalF2 = 0.0; 
-   AllBound_ModalF1 = 0.0; AllBound_ModalF2 = 0.0; 
-   ForceInviscidM[0] = 0; ForceInviscidM[1] = 0;
+  MyAllBound_ModalF1 = 0.0; MyAllBound_ModalF2 = 0.0; 
+  AllBound_ModalF1 = 0.0;       AllBound_ModalF2 = 0.0; 
+  ForceInviscidM[0] = 0; ForceInviscidM[1] = 0;
   
   for (iMarker_Monitoring = 0; iMarker_Monitoring < config->GetnMarker_Monitoring(); iMarker_Monitoring++) {
     Surface_CL_Inv[iMarker_Monitoring]      = 0.0; Surface_CD_Inv[iMarker_Monitoring]      = 0.0;
@@ -5311,6 +5315,7 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
       CFx_Inv[iMarker] = 0.0;          CFy_Inv[iMarker] = 0.0;   CFz_Inv[iMarker] = 0.0;
       CT_Inv[iMarker] = 0.0;           CQ_Inv[iMarker] = 0.0;    CMerit_Inv[iMarker] = 0.0;
       CNearFieldOF_Inv[iMarker] = 0.0; CEff_Inv[iMarker] = 0.0;
+      ModalF1[iMarker] = 0.0;   ModalF2[iMarker] = 0.0;  
       
       for (iDim = 0; iDim < nDim; iDim++) ForceInviscid[iDim] = 0.0;
       MomentInviscid[0] = 0.0; MomentInviscid[1] = 0.0; MomentInviscid[2] = 0.0;
@@ -5469,6 +5474,9 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
               Surface_CMx_Inv[iMarker_Monitoring]        += CMx_Inv[iMarker];
               Surface_CMy_Inv[iMarker_Monitoring]        += CMy_Inv[iMarker];
               Surface_CMz_Inv[iMarker_Monitoring]        += CMz_Inv[iMarker];
+              
+              Surface_ModalF1[iMarker_Monitoring]      += ModalF1[iMarker];
+              Surface_ModalF2[iMarker_Monitoring]      += ModalF2[iMarker];
             }
           }
           
@@ -5497,8 +5505,8 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
 /*
  * ==========================  BSCW wing test case modification ======================    
  */  
-  MyAllBound_ModalF1        = AllBound_ModalF1; 
-  MyAllBound_ModalF2        = AllBound_ModalF2;   
+  MyAllBound_ModalF1        = AllBound_ModalF1;    AllBound_ModalF1 = 0; 
+  MyAllBound_ModalF2        = AllBound_ModalF2;    AllBound_ModalF2 = 0;   
 /*
  * ==========================  end of BSCW wing test case modification ======================    
  */  
@@ -5550,6 +5558,10 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
   MySurface_CMy_Inv        = new su2double[config->GetnMarker_Monitoring()];
   MySurface_CMz_Inv        = new su2double[config->GetnMarker_Monitoring()];
   
+  MySurface_ModalF1      = new su2double[config->GetnMarker_Monitoring()];
+  MySurface_ModalF2      = new su2double[config->GetnMarker_Monitoring()];
+
+  
   for (iMarker_Monitoring = 0; iMarker_Monitoring < config->GetnMarker_Monitoring(); iMarker_Monitoring++) {
     MySurface_CL_Inv[iMarker_Monitoring]      = Surface_CL_Inv[iMarker_Monitoring];
     MySurface_CD_Inv[iMarker_Monitoring]      = Surface_CD_Inv[iMarker_Monitoring];
@@ -5562,6 +5574,12 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
     MySurface_CMy_Inv[iMarker_Monitoring]        = Surface_CMy_Inv[iMarker_Monitoring];
     MySurface_CMz_Inv[iMarker_Monitoring]        = Surface_CMz_Inv[iMarker_Monitoring];
     
+    MySurface_ModalF1[iMarker_Monitoring]      = Surface_ModalF1[iMarker_Monitoring];
+    MySurface_ModalF2[iMarker_Monitoring]      = Surface_ModalF2[iMarker_Monitoring];
+
+        
+        
+    
     Surface_CL_Inv[iMarker_Monitoring]      = 0.0;
     Surface_CD_Inv[iMarker_Monitoring]      = 0.0;
     Surface_CSF_Inv[iMarker_Monitoring] = 0.0;
@@ -5572,6 +5590,10 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
     Surface_CMx_Inv[iMarker_Monitoring]        = 0.0;
     Surface_CMy_Inv[iMarker_Monitoring]        = 0.0;
     Surface_CMz_Inv[iMarker_Monitoring]        = 0.0;
+    
+    Surface_ModalF1[iMarker_Monitoring]      = 0.0;
+    Surface_ModalF2[iMarker_Monitoring]      = 0.0;
+
   }
   
   SU2_MPI::Allreduce(MySurface_CL_Inv, Surface_CL_Inv, config->GetnMarker_Monitoring(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -5586,10 +5608,14 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
   SU2_MPI::Allreduce(MySurface_CMy_Inv, Surface_CMy_Inv, config->GetnMarker_Monitoring(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   SU2_MPI::Allreduce(MySurface_CMz_Inv, Surface_CMz_Inv, config->GetnMarker_Monitoring(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   
+  SU2_MPI::Allreduce(MySurface_ModalF1, Surface_ModalF1, config->GetnMarker_Monitoring(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+  SU2_MPI::Allreduce(MySurface_ModalF2, Surface_ModalF2, config->GetnMarker_Monitoring(), MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+  
   delete [] MySurface_CL_Inv; delete [] MySurface_CD_Inv; delete [] MySurface_CSF_Inv;
   delete [] MySurface_CEff_Inv;  delete [] MySurface_CFx_Inv;   delete [] MySurface_CFy_Inv;
   delete [] MySurface_CFz_Inv;   delete [] MySurface_CMx_Inv;   delete [] MySurface_CMy_Inv;
-  delete [] MySurface_CMz_Inv;
+  delete [] MySurface_CMz_Inv; delete [] MySurface_ModalF1;delete [] MySurface_ModalF2;
   
 #endif
   
@@ -5632,6 +5658,10 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
     Surface_CMx[iMarker_Monitoring]        = Surface_CMx_Inv[iMarker_Monitoring];
     Surface_CMy[iMarker_Monitoring]        = Surface_CMy_Inv[iMarker_Monitoring];
     Surface_CMz[iMarker_Monitoring]        = Surface_CMz_Inv[iMarker_Monitoring];
+    
+    Surface_ModalF1[iMarker_Monitoring]      = Surface_ModalF1[iMarker_Monitoring];
+    Surface_ModalF2[iMarker_Monitoring]      = Surface_ModalF2[iMarker_Monitoring];
+
   }
   
 }
