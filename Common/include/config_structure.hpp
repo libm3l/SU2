@@ -351,6 +351,7 @@ private:
   unsigned long Unst_nIntIter;			/*!< \brief Number of internal iterations (Dual time Method). */
   unsigned long Dyn_nIntIter;			/*!< \brief Number of internal iterations (Newton-Raphson Method for nonlinear structural analysis). */
   long Unst_RestartIter;			/*!< \brief Iteration number to restart an unsteady simulation (Dual time Method). */
+  long CoSimEnginePort;			                /*!< \brief Port number */
   long Unst_AdjointIter;			/*!< \brief Iteration number to begin the reverse time integration in the direct solver for the unsteady adjoint. */
   long Iter_Avg_Objective;			/*!< \brief Iteration the number of time steps to be averaged, counting from the back */
   long Dyn_RestartIter;			/*!< \brief Iteration number to restart a dynamic structural analysis. */
@@ -604,6 +605,7 @@ private:
   string Mesh_FileName,			/*!< \brief Mesh input file. */
   Mesh_Out_FileName,				/*!< \brief Mesh output file. */
   Solution_FlowFileName,			/*!< \brief Flow solution input file. */
+  CoSimEngineIP,			/*!< \brief Flow solution input file. */
   Solution_LinFileName,			/*!< \brief Linearized flow solution input file. */
   Solution_AdjFileName,			/*!< \brief Adjoint solution input file for drag functional. */
   Solution_FEMFileName,			/*!< \brief Adjoint solution input file for drag functional. */
@@ -4167,6 +4169,18 @@ public:
    * \return Name of the file with the solution of the flow problem.
    */
   string GetSolution_FlowFileName(void);
+
+  /*!
+   * \brief Get IP address of co-simulation engine.
+   * \return IP address
+   */
+  string GetCoSimEngineIP(void);
+
+  /*!
+   * \brief Get port number
+   * \return port number
+   */
+  long GetCoSimEnginePort(void);
   
   /*!
    * \brief Get the name of the file with the solution of the adjoint flow problem

@@ -47,8 +47,11 @@
  */
 
 
-#include "/home/jka/Cprograms/Sources/libm3l/Source/data_util/libm3l.h"
-#include "/home/jka/Cprograms/Sources/lsipdx/Source/lsipdx.h"
+//#include "/home/jiraseka/Cprograms/Sources/libm3l/Source/data_util//libm3l.h"
+//#include "/home/jiraseka/Cprograms/Sources/lsipdx/Source/lsipdx.h"
+
+#include "Elast_Solver.h"
+
 
 int main(int argc, char *argv[])
 {
@@ -247,9 +250,14 @@ int main(int argc, char *argv[])
 	mf2_n = ModalForce[1];
     
     if(niter ==0  && restart == 0){
-   printf(" Nullifying \n");
-    mf1_n=0;
-    mf2_n=0;
+    
+       if( fclose (fp) != 0)
+		Perror("fclose");
+       if ( (fp = fopen("COORDS","w")) == NULL)
+           Perror("fopen");
+       printf(" Nullifying \n");
+       mf1_n=0;
+       mf2_n=0;
     }
 
 /*

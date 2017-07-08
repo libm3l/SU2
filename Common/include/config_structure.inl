@@ -1130,6 +1130,18 @@ inline string CConfig::GetBreakdown_FileName(void) { return Breakdown_FileName; 
 
 inline string CConfig::GetSolution_FlowFileName(void) { return Solution_FlowFileName; }
 
+
+
+
+
+inline string CConfig::GetCoSimEngineIP(void) { return CoSimEngineIP; }
+inline long   CConfig::GetCoSimEnginePort(void) { return CoSimEnginePort; }
+
+
+
+
+
+
 inline string CConfig::GetSolution_AdjFileName(void) { return Solution_AdjFileName; }
 
 inline string CConfig::GetSolution_FEMFileName(void) { return Solution_FEMFileName; }

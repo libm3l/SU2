@@ -2692,13 +2692,10 @@ int communicate(CConfig *config, CSolver ****solver_container, d6dof_t *angle, i
 	node_t *Gnode=NULL, *TmpNode = NULL, *FoundNode = NULL;
 	size_t dim[1], tot_dim;
 
-	char *hostname="localhost";
 	int sockfd, portno;
 
 	char *name ="CFD2SIM";
 	char *name1="SIM2CFD";
-	
-//	char name_i[80], name_o[80], channel_name[80];
 
 	double *tmpfloat, Lift, Drag, Side, Ceff, Cmx, Cmy, Cmz, Cfx, Cfy, Cfz;
 	double deltaT, time;
@@ -2706,7 +2703,9 @@ int communicate(CConfig *config, CSolver ****solver_container, d6dof_t *angle, i
 	opts_t *Popts_1, opts, opts_1, *Popts;
 	find_t *SFounds;
 	
-	portno = 31000;
+        string host  = config->GetCoSimEngineIP();
+        const char *hostname = host.c_str();
+        portno    = config->GetCoSimEnginePort();
 /*
  * get forces/moments
  */
@@ -2958,21 +2957,20 @@ int communicateBSCW(CConfig *config, CSolver ****solver_container, d6dof_t *angl
 	node_t *Gnode=NULL, *TmpNode = NULL, *FoundNode = NULL;
 	size_t dim[1], tot_dim;
 
-	char *hostname="localhost";
 	int sockfd, portno;
 
 	char *name ="CFD2SIM";
 	char *name1="SIM2CFD";
-	
-//	char name_i[80], name_o[80], channel_name[80];
 
 	double *tmpfloat, ModForce1, ModForce2;
 	double deltaT, time;
 	client_fce_struct_t InpPar, *PInpPar;
 	opts_t *Popts_1, opts, opts_1, *Popts;
 	find_t *SFounds;
-	
-	portno = 31000;
+
+        string host  = config->GetCoSimEngineIP();
+        const char *hostname = host.c_str();
+        portno    = config->GetCoSimEnginePort();
 /*
  * modal forces
  */
