@@ -1774,10 +1774,17 @@ void CConfig::SetConfig_Options(unsigned short val_iZone, unsigned short val_nZo
   /* DESCRIPTION: Activate ParMETIS mode for testing */
   addBoolOption("PARMETIS", ParMETIS, false);
 
-
-  addStringOption("COSIMENGINE_IP_ADDRES", CoSimEngineIP, string("localhost"));
   /*!\brief COSIMENGINE_IP_ADDRES\n DESCRIPTION: IP address of co-simulation engine \ingroup Config*/
+  addStringOption("COSIMENGINE_IP_ADDRES", CoSimEngineIP, string("localhost"));
+
+  /*!\brief PORT_NUMBER\n DESCRIPTION: Port number of co-simulation engine \ingroup Config*/
   addLongOption("PORT_NUMBER", CoSimEnginePort, 31000);
+
+  /*!\brief AE_CHANNEL_O\n DESCRIPTION: Name of outgoing aeroelastic channel \ingroup Config*/
+  addStringOption("AE_CHANNEL_O", Ae_Channel_O, string("None"));
+
+  /*!\brief AE_CHANNEL_I\n DESCRIPTION: Name of incoming aeroelastic channel \ingroup Config*/
+  addStringOption("AE_CHANNEL_I", Ae_Channel_I, string("None"));
   
   /* END_CONFIG_OPTIONS */
 

@@ -605,7 +605,9 @@ private:
   string Mesh_FileName,			/*!< \brief Mesh input file. */
   Mesh_Out_FileName,				/*!< \brief Mesh output file. */
   Solution_FlowFileName,			/*!< \brief Flow solution input file. */
-  CoSimEngineIP,			/*!< \brief Flow solution input file. */
+  CoSimEngineIP,			/*!< \brief lsipdx cosimulation engine IP. */
+  Ae_Channel_I,			/*!< \brief name of aeroelastic incoming channel. */
+  Ae_Channel_O,			/*!< \brief name of aeroelastic outgoing channel. */
   Solution_LinFileName,			/*!< \brief Linearized flow solution input file. */
   Solution_AdjFileName,			/*!< \brief Adjoint solution input file for drag functional. */
   Solution_FEMFileName,			/*!< \brief Adjoint solution input file for drag functional. */
@@ -4181,6 +4183,18 @@ public:
    * \return port number
    */
   long GetCoSimEnginePort(void);
+
+  /*!
+   * \brief Get name of aeroelastic outgoing channel
+   * \return Name of outgoing channel
+   */
+  string GetAe_Channel_O(void);
+
+  /*!
+   * \brief Get name of aeroelastic outgoing channel
+   * \return Name of incoming channel
+   */
+  string GetAe_Channel_I(void);
   
   /*!
    * \brief Get the name of the file with the solution of the adjoint flow problem

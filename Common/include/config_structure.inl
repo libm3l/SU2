@@ -1135,9 +1135,12 @@ inline string CConfig::GetSolution_FlowFileName(void) { return Solution_FlowFile
 
 
 inline string CConfig::GetCoSimEngineIP(void) { return CoSimEngineIP; }
+
 inline long   CConfig::GetCoSimEnginePort(void) { return CoSimEnginePort; }
 
+inline string CConfig::GetAe_Channel_O(void) { return Ae_Channel_O; }
 
+inline string CConfig::GetAe_Channel_I(void) { return Ae_Channel_I; }
 
 
 

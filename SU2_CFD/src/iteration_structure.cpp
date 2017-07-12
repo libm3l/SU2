@@ -2694,8 +2694,8 @@ int communicate(CConfig *config, CSolver ****solver_container, d6dof_t *angle, i
 
 	int sockfd, portno;
 
-	char *name ="CFD2SIM";
-	char *name1="SIM2CFD";
+//	char *name ="CFD2SIM";
+//	char *name1="SIM2CFD";
 
 	double *tmpfloat, Lift, Drag, Side, Ceff, Cmx, Cmy, Cmz, Cfx, Cfy, Cfz;
 	double deltaT, time;
@@ -2706,6 +2706,12 @@ int communicate(CConfig *config, CSolver ****solver_container, d6dof_t *angle, i
         string host  = config->GetCoSimEngineIP();
         const char *hostname = host.c_str();
         portno    = config->GetCoSimEnginePort();
+
+        host  = config->GetAe_Channel_O();
+        const char *name = host.c_str();
+
+        host  = config->GetAe_Channel_I();
+        const char *name1 = host.c_str();
 /*
  * get forces/moments
  */
@@ -2959,8 +2965,8 @@ int communicateBSCW(CConfig *config, CSolver ****solver_container, d6dof_t *angl
 
 	int sockfd, portno;
 
-	char *name ="CFD2SIM";
-	char *name1="SIM2CFD";
+//	char *name ="CFD2SIM";
+//	char *name1="SIM2CFD";
 
 	double *tmpfloat, ModForce1, ModForce2;
 	double deltaT, time;
@@ -2971,6 +2977,12 @@ int communicateBSCW(CConfig *config, CSolver ****solver_container, d6dof_t *angl
         string host  = config->GetCoSimEngineIP();
         const char *hostname = host.c_str();
         portno    = config->GetCoSimEnginePort();
+
+        host  = config->GetAe_Channel_O();
+        const char *name = host.c_str();
+
+        host  = config->GetAe_Channel_I();
+        const char *name1 = host.c_str();
 /*
  * modal forces
  */

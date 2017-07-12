@@ -1,5 +1,5 @@
 /*!
- * \file solution_direct_mean.cpp
+ * \file solution_direct_mean.cpp/Mu_ref
  * \brief Main subrotuines for solving direct problems (Euler, Navier-Stokes, etc.).
  * \author F. Palacios, T. Economon
  * \version 5.0.0 "Raven"
