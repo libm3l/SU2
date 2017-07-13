@@ -102,6 +102,8 @@ int main(int argc, char *argv[])
 
         printf("Restart [1] or not [0]\n");
         scanf("%d", &restart);
+        printf("Modal damping coefficients\n");
+        scanf("%lf %lf", &md1, &md2);
 
         if(restart == 1){
 
@@ -228,20 +230,20 @@ int main(int argc, char *argv[])
 	printf("Time step is %lf \n", t);
 	f1 = 3.33000000000000;  // frequency
 	w1 = 2*3.1415926*f1;
-	md1 = 0;                // damping
+//	md1 = 1;  //0;                // damping
 
 	A11 = 0.25*w1*w1 + md1*w1/t+1./(t*t);
-	A12 = 0.25*w1*w1 - 2./(t*t);
+	A12 = 0.25*w1*w1          - 2./(t*t);
 	A13 = 0.25*w1*w1 - md1*w1/t+1./(t*t);
 /*
  * first mode - pitching mode
  */
 	f2 = 5.2000000000000;   // frequency
 	w2 = 2*3.1415926*f2;
-	md2 = 0;                // damping
+//	md2 = 1;  //0;                // damping
 
 	A21 = 0.25*w2*w2 + md2*w2/t+1./(t*t);
-	A22 = 0.25*w2*w2 - 2./(t*t);
+	A22 = 0.25*w2*w2          - 2./(t*t);
 	A23 = 0.25*w2*w2 - md2*w2/t+1./(t*t);
 /*
  * modal forces - they were recevied from SU2
@@ -263,11 +265,11 @@ int main(int argc, char *argv[])
 /*
  * get new modal coordinates
  */
-	mo1 = 1;     // modal mass
-	Q1n1 = ((mf1_n + 2*mf1_n1 +mf1_n2)/(4*mo1) - A12*Q1n2 -A13*Q1n3)/A11;
+	mo1 = 1.;     // modal mass
+	Q1n1 = ((mf1_n + 2*mf1_n1 + mf1_n2)/(4*mo1) - A12*Q1n2 - A13*Q1n3)/A11;
 
-	mo2 = 1;     // modal mass
-	Q2n1 = ((mf2_n + 2*mf2_n1 +mf2_n2)/(4*mo2) - A22*Q2n2 -A23*Q2n3)/A21;
+	mo2 = 1.;     // modal mass
+	Q2n1 = ((mf2_n + 2*mf2_n1 + mf2_n2)/(4*mo2) - A22*Q2n2 - A23*Q2n3)/A21;
 /*
  * shift solution
  */

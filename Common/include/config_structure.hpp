@@ -352,6 +352,7 @@ private:
   unsigned long Dyn_nIntIter;			/*!< \brief Number of internal iterations (Newton-Raphson Method for nonlinear structural analysis). */
   long Unst_RestartIter;			/*!< \brief Iteration number to restart an unsteady simulation (Dual time Method). */
   long CoSimEnginePort;			                /*!< \brief Port number */
+  long Comm_Freq;			                /*!< \brief communication frenquency */
   long Unst_AdjointIter;			/*!< \brief Iteration number to begin the reverse time integration in the direct solver for the unsteady adjoint. */
   long Iter_Avg_Objective;			/*!< \brief Iteration the number of time steps to be averaged, counting from the back */
   long Dyn_RestartIter;			/*!< \brief Iteration number to restart a dynamic structural analysis. */
@@ -4195,6 +4196,12 @@ public:
    * \return Name of incoming channel
    */
   string GetAe_Channel_I(void);
+
+  /*!
+   * \brief Get communication frequency for steady aeroelasticity
+   * \return Communication Frequency
+   */
+  long GetComm_Freq(void);
   
   /*!
    * \brief Get the name of the file with the solution of the adjoint flow problem

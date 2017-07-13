@@ -65,6 +65,7 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
   unsigned short Kind_Grid_Movement = config_container[val_iZone]->GetKind_GridMovement(val_iZone);
   unsigned long nIterMesh;
   unsigned long iPoint;
+  long COMMITER;
 
   d6dof_t d6dofdata, d6dofdata_old, *p_6DOFdata, *p_6DOFdata_old;
   conn_t conn, *pconn;
@@ -259,6 +260,11 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
       break;
 
     case EXTERNAL: 
+
+     COMMITER = config_container[val_iZone]->GetComm_Freq();
+//     if (COMMITER != 0 &&  config_container[val_iZone]->GetExtIter() % COMMITER != 0 )break;
+
+printf(" HERE 1\n");
   /*
   * motion prescribed by external solver, get the previous iteration 
   * rotational angles, displacement and rotation center
@@ -276,6 +282,9 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
       p_6DOFdata_old->rotcenter[1] = config_container[val_iZone]->GetMotion_Origin_Y(val_iZone);
       p_6DOFdata_old->rotcenter[2] = config_container[val_iZone]->GetMotion_Origin_Z(val_iZone);
 
+     if (COMMITER != 0 &&  config_container[val_iZone]->GetExtIter() % COMMITER == 0 )
+     {
+
       if (rank == MASTER_NODE){
  /*
   * MASTER node communicate with external solver
@@ -288,9 +297,8 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
  * ==========================  BSCW wing test case modification ======================
  */
 
-          if( communicateBSCW(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn, "shift") != 0)
-              Error("Communicate()");  
-
+     if( communicateBSCW(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn, "shift") != 0)
+         Error("Communicate()");  
 /*
  * ==========================  end of BSCW wing test case modification ======================
  */      
@@ -299,6 +307,29 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
 
 //	  cout << endl << " Data from external process received, communication time: " << seconds << " seconds" << endl;
       }
+      else
+      {
+
+printf(" Setting values \n");
+
+      p_6DOFdata->angles[0] = config_container[val_iZone]->GetYaw(val_iZone);
+      p_6DOFdata->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
+      p_6DOFdata->angles[2] = config_container[val_iZone]->GetRoll(val_iZone);
+
+      p_6DOFdata->transvec[0] = config_container[val_iZone]->GetTranslation_X(val_iZone);
+      p_6DOFdata->transvec[1] = config_container[val_iZone]->GetTranslation_Y(val_iZone);
+      p_6DOFdata->transvec[2] = config_container[val_iZone]->GetTranslation_Z(val_iZone);
+      
+      p_6DOFdata->rotcenter[0] = config_container[val_iZone]->GetMotion_Origin_X(val_iZone);
+      p_6DOFdata->rotcenter[1] = config_container[val_iZone]->GetMotion_Origin_Y(val_iZone);
+      p_6DOFdata->rotcenter[2] = config_container[val_iZone]->GetMotion_Origin_Z(val_iZone);
+
+       }
+
+
+      printf("%lf %lf %lf \n", p_6DOFdata->angles[0], p_6DOFdata->angles[1], p_6DOFdata->angles[2]);
+      printf("%lf %lf %lf \n", p_6DOFdata->transvec[0], p_6DOFdata->transvec[1], p_6DOFdata->transvec[2]);
+
 /*
  *recevied angles have to redistrbuted to all partitions
  */   
@@ -322,7 +353,7 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
 
       config_container[val_iZone]->SetTranslation_X(val_iZone,p_6DOFdata->transvec[0]);
       config_container[val_iZone]->SetTranslation_Y(val_iZone,p_6DOFdata->transvec[1]);
-      config_container[val_iZone]->SetTranslation_Z(val_iZone,p_6DOFdata->transvec[2]);
+      config_container[val_iZone]->SetTranslation_Z(val_iZone,p_6DOFdata->transvec[2]);}
             
       if(ExtIter == 0)
 /*
@@ -341,6 +372,8 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
        including computing the grid velocities on the coarser levels. ---*/
       
       grid_movement[val_iZone]->UpdateMultiGrid(geometry_container[val_iZone], config_container[val_iZone]);
+
+printf(" End HERE \n");
     break;
 
 
@@ -680,8 +713,10 @@ void CFluidIteration::Iterate(COutput *output,
   * motion prescribed by external solver, get the previous iteration 
   * rotational angles, displacement and rotation center
   */
+printf(" HERE2 %ld\n", config_container[val_iZone]->GetComm_Freq());
+      if ( config_container[val_iZone]->GetComm_Freq() == 0  ){
       if( config_container[val_iZone]->GetKind_GridMovement(ZONE_0) == EXTERNAL){
-
+printf(" HERE3");
       
       p_6DOFdata_old->angles[0] = config_container[val_iZone]->GetYaw(val_iZone);
       p_6DOFdata_old->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
@@ -755,7 +790,8 @@ void CFluidIteration::Iterate(COutput *output,
       
       grid_movement[val_iZone]->UpdateMultiGrid(geometry_container[val_iZone], config_container[val_iZone]);
 
-}
+   }
+   }   // end if unsteady
   
   /*--- Call Dynamic mesh update if AEROELASTIC motion was specified ---*/
   
