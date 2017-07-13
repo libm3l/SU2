@@ -3572,7 +3572,6 @@ void CEulerSolver::SetNondimensionalization(CGeometry *geometry, CConfig *config
       Pressure_FreeStream = FluidModel->GetPressure();
       config->SetPressure_FreeStream(Pressure_FreeStream);
       Energy_FreeStream = FluidModel->GetStaticEnergy() + 0.5*ModVel_FreeStream*ModVel_FreeStream;
-
     }
 
     /*--- Thermodynamics quantities based initialization ---*/
@@ -3869,6 +3868,10 @@ void CEulerSolver::SetNondimensionalization(CGeometry *geometry, CConfig *config
     cout << "Magnitude: "   << config->GetModVel_FreeStream();
     if (config->GetSystemMeasurements() == SI) cout << " m/s (" << config->GetModVel_FreeStream()*1.94384 << " KTS)." << endl;
     else if (config->GetSystemMeasurements() == US) cout << " ft/s (" << config->GetModVel_FreeStream()*0.592484 << " KTS)." << endl;
+
+    cout << "Free-stream dynamic pressure: " << 0.5*config->GetDensity_FreeStream()*config->GetModVel_FreeStream()*config->GetModVel_FreeStream();
+    if (config->GetSystemMeasurements() == SI) cout << " Pa." << endl;
+    else if (config->GetSystemMeasurements() == US) cout << " psf." << endl;
     
     cout << "Free-stream total energy per unit mass: " << config->GetEnergy_FreeStream();
     if (config->GetSystemMeasurements() == SI) cout << " m^2/s^2." << endl;
