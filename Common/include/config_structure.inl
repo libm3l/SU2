@@ -1142,6 +1142,8 @@ inline string CConfig::GetAe_Channel_O(void) { return Ae_Channel_O; }
 
 inline string CConfig::GetAe_Channel_I(void) { return Ae_Channel_I; }
 
+inline long   CConfig::GetComm_Freq(void) { return Comm_Freq; }
+
 
 
 

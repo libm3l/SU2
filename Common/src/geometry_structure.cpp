@@ -11708,32 +11708,38 @@ void CPhysicalGeometry::SetGridVelocity(CConfig *config, unsigned long iter) {
   
   /*--- Compute the velocity of each node in the volume mesh ---*/
   
-  for (iPoint = 0; iPoint < GetnPoint(); iPoint++) {
+  if(iter > 0){
+    for (iPoint = 0; iPoint < GetnPoint(); iPoint++) {
     
     /*--- Coordinates of the current point at n+1, n, & n-1 time levels ---*/
     
-    Coord_nM1 = node[iPoint]->GetCoord_n1();
-    Coord_n   = node[iPoint]->GetCoord_n();
-    Coord_nP1 = node[iPoint]->GetCoord();
+      Coord_nM1 = node[iPoint]->GetCoord_n1();
+      Coord_n   = node[iPoint]->GetCoord_n();
+      Coord_nP1 = node[iPoint]->GetCoord();
 
     /*--- Unsteady time step ---*/
     
-    TimeStep = config->GetDelta_UnstTimeND();
+      TimeStep = config->GetDelta_UnstTimeND();
     
     /*--- Compute mesh velocity with 1st or 2nd-order approximation ---*/
     
-    for (iDim = 0; iDim < nDim; iDim++) {
-      if (config->GetUnsteady_Simulation() == DT_STEPPING_1ST)
-        GridVel = ( Coord_nP1[iDim] - Coord_n[iDim] ) / TimeStep;
-      if (config->GetUnsteady_Simulation() == DT_STEPPING_2ND)
-        GridVel = ( 3.0*Coord_nP1[iDim] - 4.0*Coord_n[iDim]
+      for (iDim = 0; iDim < nDim; iDim++) {
+        if (config->GetUnsteady_Simulation() == DT_STEPPING_1ST)
+          GridVel = ( Coord_nP1[iDim] - Coord_n[iDim] ) / TimeStep;
+        if (config->GetUnsteady_Simulation() == DT_STEPPING_2ND)
+          GridVel = ( 3.0*Coord_nP1[iDim] - 4.0*Coord_n[iDim]
                    + 1.0*Coord_nM1[iDim] ) / (2.0*TimeStep);
       
       /*--- Store grid velocity for this point ---*/
       
-      node[iPoint]->SetGridVel(iDim, GridVel);
+        node[iPoint]->SetGridVel(iDim, GridVel);
+      }
     }
-  }
+   }
+   else{
+     for (iPoint = 0; iPoint < GetnPoint(); iPoint++) {
+        for (iDim = 0; iDim < nDim; iDim++) {node[iPoint]->SetGridVel(iDim, 0.);}}
+   }
   
 }
 

@@ -1785,6 +1785,9 @@ void CConfig::SetConfig_Options(unsigned short val_iZone, unsigned short val_nZo
 
   /*!\brief AE_CHANNEL_I\n DESCRIPTION: Name of incoming aeroelastic channel \ingroup Config*/
   addStringOption("AE_CHANNEL_I", Ae_Channel_I, string("None"));
+
+  /*!\brief PORT_NUMBER\n DESCRIPTION: Port number of co-simulation engine \ingroup Config*/
+  addLongOption("COMM_FREQ", Comm_Freq, 0);
   
   /* END_CONFIG_OPTIONS */
 

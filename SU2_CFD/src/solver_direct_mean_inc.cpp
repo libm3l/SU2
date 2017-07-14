@@ -1841,12 +1841,17 @@ void CIncEulerSolver::SetNondimensionalization(CGeometry *geometry, CConfig *con
       cout << "Free-stream velocity: (" << config->GetVelocity_FreeStream()[0] << ", ";
       cout << config->GetVelocity_FreeStream()[1] << ", " << config->GetVelocity_FreeStream()[2] << ")";
     }
+
     if (config->GetSystemMeasurements() == SI) cout << " m/s. ";
     else if (config->GetSystemMeasurements() == US) cout << " ft/s. ";
     
     cout << "Magnitude: "  << config->GetModVel_FreeStream();
     if (config->GetSystemMeasurements() == SI) cout << " m/s." << endl;
     else if (config->GetSystemMeasurements() == US) cout << " ft/s." << endl;
+
+    cout << "Free-stream dynamic pressure: " << 0.5*config->GetDensity_FreeStream()*config->GetModVel_FreeStream()*config->GetModVel_FreeStream();
+    if (config->GetSystemMeasurements() == SI) cout << " Pa." << endl;
+    else if (config->GetSystemMeasurements() == US) cout << " psf." << endl;
     
     if (viscous) {
       cout << "Free-stream viscosity: " << config->GetViscosity_FreeStream();
