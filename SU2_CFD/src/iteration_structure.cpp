@@ -263,8 +263,6 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
 
      COMMITER = config_container[val_iZone]->GetComm_Freq();
 //     if (COMMITER != 0 &&  config_container[val_iZone]->GetExtIter() % COMMITER != 0 )break;
-
-printf(" HERE 1\n");
   /*
   * motion prescribed by external solver, get the previous iteration 
   * rotational angles, displacement and rotation center
@@ -282,8 +280,7 @@ printf(" HERE 1\n");
       p_6DOFdata_old->rotcenter[1] = config_container[val_iZone]->GetMotion_Origin_Y(val_iZone);
       p_6DOFdata_old->rotcenter[2] = config_container[val_iZone]->GetMotion_Origin_Z(val_iZone);
 
-     if (COMMITER != 0 &&  config_container[val_iZone]->GetExtIter() % COMMITER == 0 )
-     {
+     if ( (COMMITER != 0 &&  config_container[val_iZone]->GetExtIter() % COMMITER == 0) || COMMITER == 0 ){
 
       if (rank == MASTER_NODE){
  /*
@@ -306,11 +303,9 @@ printf(" HERE 1\n");
 	  seconds = (double)((now.tv_sec+now.tv_nsec*1e-9) - (double)(tmstart.tv_sec+tmstart.tv_nsec*1e-9));
 
 //	  cout << endl << " Data from external process received, communication time: " << seconds << " seconds" << endl;
-      }
+      }}
       else
       {
-
-printf(" Setting values \n");
 
       p_6DOFdata->angles[0] = config_container[val_iZone]->GetYaw(val_iZone);
       p_6DOFdata->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
@@ -325,11 +320,6 @@ printf(" Setting values \n");
       p_6DOFdata->rotcenter[2] = config_container[val_iZone]->GetMotion_Origin_Z(val_iZone);
 
        }
-
-
-      printf("%lf %lf %lf \n", p_6DOFdata->angles[0], p_6DOFdata->angles[1], p_6DOFdata->angles[2]);
-      printf("%lf %lf %lf \n", p_6DOFdata->transvec[0], p_6DOFdata->transvec[1], p_6DOFdata->transvec[2]);
-
 /*
  *recevied angles have to redistrbuted to all partitions
  */   
@@ -353,7 +343,7 @@ printf(" Setting values \n");
 
       config_container[val_iZone]->SetTranslation_X(val_iZone,p_6DOFdata->transvec[0]);
       config_container[val_iZone]->SetTranslation_Y(val_iZone,p_6DOFdata->transvec[1]);
-      config_container[val_iZone]->SetTranslation_Z(val_iZone,p_6DOFdata->transvec[2]);}
+      config_container[val_iZone]->SetTranslation_Z(val_iZone,p_6DOFdata->transvec[2]);
             
       if(ExtIter == 0)
 /*
@@ -373,7 +363,6 @@ printf(" Setting values \n");
       
       grid_movement[val_iZone]->UpdateMultiGrid(geometry_container[val_iZone], config_container[val_iZone]);
 
-printf(" End HERE \n");
     break;
 
 
@@ -713,10 +702,8 @@ void CFluidIteration::Iterate(COutput *output,
   * motion prescribed by external solver, get the previous iteration 
   * rotational angles, displacement and rotation center
   */
-printf(" HERE2 %ld\n", config_container[val_iZone]->GetComm_Freq());
       if ( config_container[val_iZone]->GetComm_Freq() == 0  ){
       if( config_container[val_iZone]->GetKind_GridMovement(ZONE_0) == EXTERNAL){
-printf(" HERE3");
       
       p_6DOFdata_old->angles[0] = config_container[val_iZone]->GetYaw(val_iZone);
       p_6DOFdata_old->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
