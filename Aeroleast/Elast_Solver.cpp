@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 	node_t *Gnode=NULL, *Snode=NULL, *FoundNode=NULL, *TmpNode=NULL;
 	size_t i, niter, dim[1];
 
-	lmint_t sockfd, portno, restart;
+	lmint_t sockfd, portno, restart, *comfreq;
 
         socklen_t clilen;
         struct sockaddr_in cli_addr;
@@ -102,6 +102,8 @@ int main(int argc, char *argv[])
 
         printf("Restart [1] or not [0]\n");
         scanf("%d", &restart);
+        printf("Modal mass\n");
+        scanf("%lf %lf", &mo1, &mo2);
         printf("Modal damping coefficients\n");
         scanf("%lf %lf", &md1, &md2);
 
@@ -215,18 +217,28 @@ int main(int argc, char *argv[])
 	action = (lmchar_t *)m3l_get_data_pointer(FoundNode);
 	m3l_DestroyFound(&SFounds);
 /*
+ * find frequency of communiction
+ */
+	SFounds = m3l_Locate(Gnode, "/CFD_2_STR/COMFREQ", "/*/*",  (lmchar_t *)NULL);
+	FoundNode = m3l_get_Found_node(SFounds, 0);
+	comfreq = (lmint_t *)m3l_get_data_pointer(FoundNode);
+	m3l_DestroyFound(&SFounds);
+/*
  *  close socket
  */
 	if( close(sockfd) == -1)
 		Perror("close");	
 /*
- * get modal coordinates, set specific parameters for BSCW test case
+ * of frequency of communication > 0, multplie time step 
  */
 
+        t = *dt;
+        if(*comfreq > 0){
+          t = *comfreq*t;
+        }
 /*
  * first mode - plunging mode
- */
-        t = *dt;
+ */          
 	printf("Time step is %lf \n", t);
 	f1 = 3.33000000000000;  // frequency
 	w1 = 2*3.1415926*f1;
@@ -265,10 +277,10 @@ int main(int argc, char *argv[])
 /*
  * get new modal coordinates
  */
-	mo1 = 1.;     // modal mass
+//	mo1 = 1.;     // modal mass
 	Q1n1 = ((mf1_n + 2*mf1_n1 + mf1_n2)/(4*mo1) - A12*Q1n2 - A13*Q1n3)/A11;
 
-	mo2 = 1.;     // modal mass
+//	mo2 = 1.;     // modal mass
 	Q2n1 = ((mf2_n + 2*mf2_n1 + mf2_n2)/(4*mo2) - A22*Q2n2 - A23*Q2n3)/A21;
 /*
  * shift solution

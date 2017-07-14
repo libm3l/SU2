@@ -38,7 +38,7 @@
 
 
 int communicate(CConfig *, CSolver ****, d6dof_t *, int, conn_t *);
-int communicateBSCW(CConfig *, CSolver ****, d6dof_t *, int, conn_t *, char* );
+int communicateBSCW(CConfig *, CSolver ****, d6dof_t *, int, conn_t *, char*, long );
 
 
 //void External_Comm(CGeometry ***,CSurfaceMovement **,CVolumetricMovement **,CFreeFormDefBox ***,
@@ -280,6 +280,7 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
       p_6DOFdata_old->rotcenter[1] = config_container[val_iZone]->GetMotion_Origin_Y(val_iZone);
       p_6DOFdata_old->rotcenter[2] = config_container[val_iZone]->GetMotion_Origin_Z(val_iZone);
 
+
      if ( (COMMITER != 0 &&  config_container[val_iZone]->GetExtIter() % COMMITER == 0) || COMMITER == 0 ){
 
       if (rank == MASTER_NODE){
@@ -294,7 +295,7 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
  * ==========================  BSCW wing test case modification ======================
  */
 
-     if( communicateBSCW(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn, "shift") != 0)
+     if( communicateBSCW(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn, "shift", COMMITER) != 0)
          Error("Communicate()");  
 /*
  * ==========================  end of BSCW wing test case modification ======================
@@ -333,6 +334,22 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
  * Save motion data, they are needed to transform the mesh back to its original position
  * during next step transformation
  */
+      if (COMMITER == 0 && ExtIter == config_container[val_iZone]->GetUnst_RestartIter()){
+/*
+ * if static aeorelast and initial iteration set all variables to 0
+ */
+        p_6DOFdata->rotcenter[0] = 0.2023;
+        p_6DOFdata->rotcenter[1] = 0;
+        p_6DOFdata->rotcenter[2] = 0;
+
+        p_6DOFdata->angles[0] = 0;
+        p_6DOFdata->angles[1] = 0;
+        p_6DOFdata->angles[2] = 0;
+
+        p_6DOFdata->transvec[0] = 0;
+        p_6DOFdata->transvec[1] = 0;
+        p_6DOFdata->transvec[2] = 0;
+      }
       config_container[val_iZone]->SetMotion_Origin_X(val_iZone,p_6DOFdata->rotcenter[0]);
       config_container[val_iZone]->SetMotion_Origin_Y(val_iZone,p_6DOFdata->rotcenter[1]);
       config_container[val_iZone]->SetMotion_Origin_Z(val_iZone,p_6DOFdata->rotcenter[2]);
@@ -355,8 +372,18 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
          grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
                                     config_container[val_iZone], val_iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,1);
 	 
-	 
+     if (COMMITER == 0 ){ 
+/* 
+ * if communicating every step, calculate grid velocity
+ */
       geometry_container[val_iZone][MESH_0]->SetGridVelocity(config_container[val_iZone], ExtIter);
+     }
+     else{
+/* 
+ * .. otherwise consider as steady aeroelasticity and nullify all grid velocities
+ */
+      geometry_container[val_iZone][MESH_0]->SetGridVelocity(config_container[val_iZone], 0);
+     }
       
       /*--- Update the multigrid structure after moving the finest grid,
        including computing the grid velocities on the coarser levels. ---*/
@@ -725,7 +752,7 @@ void CFluidIteration::Iterate(COutput *output,
          clock_gettime(CLOCK_REALTIME, &tmstart);
 
 //          if( communicate(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn) != 0)
-          if( communicateBSCW(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn, "None") != 0)
+          if( communicateBSCW(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn, "None", 0) != 0)
 
               Error("Communicate()");  
       
@@ -2960,7 +2987,7 @@ int communicate(CConfig *config, CSolver ****solver_container, d6dof_t *angle, i
 
 
 
-int communicateBSCW(CConfig *config, CSolver ****solver_container, d6dof_t *angle, int iter, conn_t *conn, char* action)
+int communicateBSCW(CConfig *config, CSolver ****solver_container, d6dof_t *angle, int iter, conn_t *conn, char* action, long COMITER)
 {
 /*
  * function is a communication routine through 
@@ -3050,6 +3077,12 @@ int communicateBSCW(CConfig *config, CSolver ****solver_container, d6dof_t *angl
 	if(  (TmpNode = m3l_Mklist("DT", "D", 1, dim, &Gnode, "/CFD_2_STR", "./", (char *)NULL)) == 0)
 		Error("socket_SU2_2_Str: m3l_Mklist");
 	TmpNode->data.df[0] = deltaT;
+/*
+ * add frequency of comminication
+ */
+	if(  (TmpNode = m3l_Mklist("COMFREQ", "I", 1, dim, &Gnode, "/CFD_2_STR", "./", (char *)NULL)) == 0)
+		Error("socket_SU2_2_Str: m3l_Mklist");
+	TmpNode->data.i[0] = COMITER;
 /*
  * add position in loop  (when making node, use --no-malloc, 
  * action is already malloced and you just point to it
