@@ -4183,12 +4183,13 @@ void CEulerSolver::Preprocessing(CGeometry *geometry, CSolver **solver_container
 #endif
   
   unsigned long ExtIter = config->GetExtIter();
-  bool adjoint          = config->GetContinuous_Adjoint();
+  bool cont_adjoint     = config->GetContinuous_Adjoint();
+  bool disc_adjoint     = config->GetDiscrete_Adjoint();
   bool implicit         = (config->GetKind_TimeIntScheme_Flow() == EULER_IMPLICIT);
   bool low_fidelity     = (config->GetLowFidelitySim() && (iMesh == MESH_1));
-  bool second_order     = ((config->GetSpatialOrder_Flow() == SECOND_ORDER) || (config->GetSpatialOrder_Flow() == SECOND_ORDER_LIMITER) || (adjoint && config->GetKind_ConvNumScheme_AdjFlow() == ROE));
-  bool limiter          = ((config->GetSpatialOrder_Flow() == SECOND_ORDER_LIMITER) && (!low_fidelity) && (ExtIter <= config->GetLimiterIter()));
-  bool center           = (config->GetKind_ConvNumScheme_Flow() == SPACE_CENTERED) || (adjoint && config->GetKind_ConvNumScheme_AdjFlow() == SPACE_CENTERED);
+  bool second_order     = ((config->GetSpatialOrder_Flow() == SECOND_ORDER) || (config->GetSpatialOrder_Flow() == SECOND_ORDER_LIMITER) || (cont_adjoint && config->GetKind_ConvNumScheme_AdjFlow() == ROE));
+  bool limiter          = ((config->GetSpatialOrder_Flow() == SECOND_ORDER_LIMITER) && (!low_fidelity) && (ExtIter <= config->GetLimiterIter()) && !(disc_adjoint && config->GetFrozen_Limiter_Disc()));
+  bool center           = (config->GetKind_ConvNumScheme_Flow() == SPACE_CENTERED) || (cont_adjoint && config->GetKind_ConvNumScheme_AdjFlow() == SPACE_CENTERED);
   bool center_jst       = center && (config->GetKind_Centered_Flow() == JST);
   bool engine           = ((config->GetnMarker_EngineInflow() != 0) || (config->GetnMarker_EngineExhaust() != 0));
   bool actuator_disk    = ((config->GetnMarker_ActDiskInlet() != 0) || (config->GetnMarker_ActDiskOutlet() != 0));
@@ -5222,8 +5223,8 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
   
   su2double Alpha           = config->GetAoA()*PI_NUMBER/180.0;
   su2double Beta            = config->GetAoS()*PI_NUMBER/180.0;
-  su2double RefAreaCoeff    = config->GetRefAreaCoeff();
-  su2double RefLengthMoment = config->GetRefLengthMoment();
+  su2double RefArea    = config->GetRefArea();
+  su2double RefLength = config->GetRefLength();
   su2double Gas_Constant    = config->GetGas_ConstantND();
   su2double *Origin         = config->GetRefOriginMoment(0);
   bool grid_movement        = config->GetGrid_Movement();
@@ -5248,7 +5249,7 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
       RefVel2  += Velocity_Inf[iDim]*Velocity_Inf[iDim];
   }
   
-  factor = 1.0 / (0.5*RefDensity*RefAreaCoeff*RefVel2);
+  factor = 1.0 / (0.5*RefDensity*RefArea*RefVel2);
   
   /*-- Variables initialization ---*/
   
@@ -5332,7 +5333,7 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
         
         Pressure = node[iPoint]->GetPressure();
         
-        CPressure[iMarker][iVertex] = (Pressure - RefPressure)*factor*RefAreaCoeff;
+        CPressure[iMarker][iVertex] = (Pressure - RefPressure)*factor*RefArea;
         
         /*--- Note that the pressure coefficient is computed at the
          halo cells (for visualization purposes), but not the forces ---*/
@@ -5383,10 +5384,10 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
           /*--- Moment with respect to the reference axis ---*/
           
           if (nDim == 3) {
-            MomentInviscid[0] += (Force[2]*MomentDist[1]-Force[1]*MomentDist[2])/RefLengthMoment;
-            MomentInviscid[1] += (Force[0]*MomentDist[2]-Force[2]*MomentDist[0])/RefLengthMoment;
+            MomentInviscid[0] += (Force[2]*MomentDist[1]-Force[1]*MomentDist[2])/RefLength;
+            MomentInviscid[1] += (Force[0]*MomentDist[2]-Force[2]*MomentDist[0])/RefLength;
           }
-          MomentInviscid[2] += (Force[1]*MomentDist[0]-Force[0]*MomentDist[1])/RefLengthMoment;
+          MomentInviscid[2] += (Force[1]*MomentDist[0]-Force[0]*MomentDist[1])/RefLength;
         }
         
       }
@@ -5693,8 +5694,8 @@ MyAllBound_CMx_Mnt, MyAllBound_CMy_Mnt, MyAllBound_CMz_Mnt,
   
   su2double Alpha            = config->GetAoA()*PI_NUMBER/180.0;
   su2double Beta             = config->GetAoS()*PI_NUMBER/180.0;
-  su2double RefAreaCoeff     = config->GetRefAreaCoeff();
-  su2double RefLengthMoment  = config->GetRefLengthMoment();
+  su2double RefArea     = config->GetRefArea();
+  su2double RefLength  = config->GetRefLength();
   su2double Gas_Constant     = config->GetGas_ConstantND();
   su2double *Origin          = config->GetRefOriginMoment(0);
   bool grid_movement         = config->GetGrid_Movement();
@@ -5718,7 +5719,7 @@ MyAllBound_CMx_Mnt, MyAllBound_CMy_Mnt, MyAllBound_CMz_Mnt,
       RefVel2  += Velocity_Inf[iDim]*Velocity_Inf[iDim];
   }
   
-  factor = 1.0 / (0.5*RefDensity*RefAreaCoeff*RefVel2);
+  factor = 1.0 / (0.5*RefDensity*RefArea*RefVel2);
   
   /*-- Variables initialization ---*/
   
@@ -5815,17 +5816,17 @@ MyAllBound_CMx_Mnt, MyAllBound_CMy_Mnt, MyAllBound_CMz_Mnt,
           /*--- Moment with respect to the reference axis ---*/
           
           if (iDim == 3) {
-            MomentInviscid[0] += (Force[2]*MomentDist[1]-Force[1]*MomentDist[2])/RefLengthMoment;
-                    MomentX_Force[1] += (-Force[1]*MomentDist[2])/RefLengthMoment;
-                    MomentX_Force[2] += (Force[2]*MomentDist[1])/RefLengthMoment;
+            MomentInviscid[0] += (Force[2]*MomentDist[1]-Force[1]*MomentDist[2])/RefLength;
+                    MomentX_Force[1] += (-Force[1]*MomentDist[2])/RefLength;
+                    MomentX_Force[2] += (Force[2]*MomentDist[1])/RefLength;
 
-            MomentInviscid[1] += (Force[0]*MomentDist[2]-Force[2]*MomentDist[0])/RefLengthMoment;
-            MomentY_Force[0] += (Force[0]*MomentDist[2])/RefLengthMoment;
-            MomentY_Force[2] += (-Force[2]*MomentDist[0])/RefLengthMoment;
+            MomentInviscid[1] += (Force[0]*MomentDist[2]-Force[2]*MomentDist[0])/RefLength;
+            MomentY_Force[0] += (Force[0]*MomentDist[2])/RefLength;
+            MomentY_Force[2] += (-Force[2]*MomentDist[0])/RefLength;
           }
-          MomentInviscid[2] += (Force[1]*MomentDist[0]-Force[0]*MomentDist[1])/RefLengthMoment;
-          MomentZ_Force[0] += (-Force[0]*MomentDist[1])/RefLengthMoment;
-                    MomentZ_Force[1] += (Force[1]*MomentDist[0])/RefLengthMoment;
+          MomentInviscid[2] += (Force[1]*MomentDist[0]-Force[0]*MomentDist[1])/RefLength;
+          MomentZ_Force[0] += (-Force[0]*MomentDist[1])/RefLength;
+                    MomentZ_Force[1] += (Force[1]*MomentDist[0])/RefLength;
           
         }
         
@@ -8981,10 +8982,10 @@ void CEulerSolver::GetPower_Properties(CGeometry *geometry, CConfig *config, uns
           su2double AvePressure = Inlet_TotalPressure_Total[iMarker_Inlet]/TotalPressure_Inf;
           
           su2double RefDensity  = Density_Inf;
-          su2double RefAreaCoeff     = config->GetRefAreaCoeff();
+          su2double RefArea     = config->GetRefArea();
           su2double RefVel2 = 0.0;  for (iDim = 0; iDim < nDim; iDim++) RefVel2  += Velocity_Inf[iDim]*Velocity_Inf[iDim];
           
-          su2double Factor = (0.5*RefDensity*RefAreaCoeff*RefVel2);
+          su2double Factor = (0.5*RefDensity*RefArea*RefVel2);
           su2double Ref = config->GetDensity_Ref() * config->GetVelocity_Ref() * config->GetVelocity_Ref() * 1.0 * 1.0;
           su2double DmT = GetTotal_CD() * Factor;
           
@@ -9307,7 +9308,7 @@ void CEulerSolver::SetActDisk_BCThrust(CGeometry *geometry, CSolver **solver_con
   Density, T0_Ti, ATerm, BTerm, LHS, RHS, RHS_PDelta, RHS_MDelta, F, DF_DLa, CTerm_, DTerm_,
   ETerm, La, La_old, TotalArea, To_Ti, DeltaT, Po_Pi, DeltaP, Area, Velocity_Normal,
   SoundSpeed2, Force_Normal,
-  RefDensity, RefAreaCoeff, RefVel2, Factor, Ref;
+  RefDensity, RefArea, RefVel2, Factor, Ref;
   unsigned short iter;
   string Marker_Tag;
   su2double Target_Force, Force, Target_Power, Power, NetThrust, BCThrust_old, Initial_BCThrust;
@@ -9326,10 +9327,10 @@ void CEulerSolver::SetActDisk_BCThrust(CGeometry *geometry, CSolver **solver_con
   su2double PolyCoeff                   = 1.0/(1.0-((Gamma-1.0)/Gamma)/Fan_Poly_Eff);
   
   RefDensity   = Density_Inf;
-  RefAreaCoeff = config->GetRefAreaCoeff();
+  RefArea = config->GetRefArea();
   RefVel2 = 0.0;  for (iDim = 0; iDim < nDim; iDim++) RefVel2  += Velocity_Inf[iDim]*Velocity_Inf[iDim];
   
-  Factor = (0.5*RefDensity*RefAreaCoeff*RefVel2);
+  Factor = (0.5*RefDensity*RefArea*RefVel2);
   Ref = config->GetDensity_Ref() * config->GetVelocity_Ref() * config->GetVelocity_Ref() * 1.0 * 1.0;
   
   /*--- Delta P and delta T are inputs ---*/
@@ -9619,10 +9620,10 @@ void CEulerSolver::SetActDisk_BCThrust(CGeometry *geometry, CSolver **solver_con
           
           Marker_Tag = config->GetMarker_All_TagBound(iMarker);
           RefDensity  = Density_Inf;
-          RefAreaCoeff = config->GetRefAreaCoeff();
+          RefArea = config->GetRefArea();
           RefVel2 = 0.0; for (iDim = 0; iDim < nDim; iDim++) RefVel2  += Velocity_Inf[iDim]*Velocity_Inf[iDim];
           
-          Factor = (0.5*RefDensity*RefAreaCoeff*RefVel2);
+          Factor = (0.5*RefDensity*RefArea*RefVel2);
           Ref = config->GetDensity_Ref() * config->GetVelocity_Ref() * config->GetVelocity_Ref() * 1.0 * 1.0;
           BCThrust = config->GetActDisk_BCThrust(Marker_Tag);
           
@@ -9905,98 +9906,99 @@ void CEulerSolver::SetFarfield_AoA(CGeometry *geometry, CSolver **solver_contain
   
 }
 
-void CEulerSolver::Compute_ComboObj(CConfig *config) {
+void CEulerSolver::Evaluate_ObjFunc(CConfig *config) {
+  
   unsigned short iMarker_Monitoring;
   su2double Weight_ObjFunc;
-
+  
   /*--- Loop over all monitored markers, add to the 'combo' objective ---*/
+  
   for (iMarker_Monitoring = 0; iMarker_Monitoring < config->GetnMarker_Monitoring(); iMarker_Monitoring++) {
+    
     Weight_ObjFunc = config->GetWeight_ObjFunc(iMarker_Monitoring);
-    switch(config->GetKind_ObjFunc(iMarker_Monitoring))
-    {
-    case DRAG_COEFFICIENT:
-      Total_ComboObj+=Weight_ObjFunc*(Surface_CD[iMarker_Monitoring]);
-      break;
-    case LIFT_COEFFICIENT:
-      Total_ComboObj+=Weight_ObjFunc*(Surface_CL[iMarker_Monitoring]);
-      break;
-    case SIDEFORCE_COEFFICIENT:
-      Total_ComboObj+=Weight_ObjFunc*(Surface_CSF[iMarker_Monitoring]);
-      break;
-    case EFFICIENCY:
-      Total_ComboObj+=Weight_ObjFunc*(Surface_CEff[iMarker_Monitoring]);
-      break;
-    case MOMENT_X_COEFFICIENT:
-      Total_ComboObj+=Weight_ObjFunc*(Surface_CMx[iMarker_Monitoring]);
-      break;
-    case MOMENT_Y_COEFFICIENT:
-      Total_ComboObj+=Weight_ObjFunc*(Surface_CMy[iMarker_Monitoring]);
-      break;
-    case MOMENT_Z_COEFFICIENT:
-      Total_ComboObj+=Weight_ObjFunc*(Surface_CMz[iMarker_Monitoring]);
-      break;
-    case FORCE_X_COEFFICIENT:
-      Total_ComboObj+=Weight_ObjFunc*Surface_CFx[iMarker_Monitoring];
-      break;
-    case FORCE_Y_COEFFICIENT:
-      Total_ComboObj+=Weight_ObjFunc*Surface_CFy[iMarker_Monitoring];
-      break;
-    case FORCE_Z_COEFFICIENT:
-      Total_ComboObj+=Weight_ObjFunc*Surface_CFz[iMarker_Monitoring];
-      break;
-    case TOTAL_HEATFLUX:
-      Total_ComboObj+=Weight_ObjFunc*Surface_HF_Visc[iMarker_Monitoring];
-      break;
-    case MAXIMUM_HEATFLUX:
-      Total_ComboObj+=Weight_ObjFunc*Surface_MaxHF_Visc[iMarker_Monitoring];
-      break;
-    /*--- The following are not per-surface, and as a result will be
-     * double-counted iff multiple surfaces are specified as well as multi-objective
-     * TODO: print a warning to the user about that possibility. ---*/
-    case EQUIVALENT_AREA:
-      Total_ComboObj+=Weight_ObjFunc*Total_CEquivArea;
-      break;
-    case AERO_DRAG_COEFFICIENT:
-      Total_ComboObj+=Weight_ObjFunc*Total_AeroCD;
-      break;
-    case RADIAL_DISTORTION:
-      Total_ComboObj+=Weight_ObjFunc*Total_RadialDistortion;
-      break;
-    case CIRCUMFERENTIAL_DISTORTION:
-      Total_ComboObj+=Weight_ObjFunc*Total_CircumferentialDistortion;
-      break;
-    case NEARFIELD_PRESSURE:
-      Total_ComboObj+=Weight_ObjFunc*Total_CNearFieldOF;
-      break;
-    case INVERSE_DESIGN_PRESSURE:
-      Total_ComboObj+=Weight_ObjFunc*Total_CpDiff;
-      break;
-    case INVERSE_DESIGN_HEATFLUX:
-      Total_ComboObj+=Weight_ObjFunc*Total_HeatFluxDiff;
-      break;
-    case THRUST_COEFFICIENT:
-      Total_ComboObj+=Weight_ObjFunc*Total_CT;
-      break;
-    case TORQUE_COEFFICIENT:
-      Total_ComboObj+=Weight_ObjFunc*Total_CQ;
-      break;
-    case FIGURE_OF_MERIT:
-      Total_ComboObj+=Weight_ObjFunc*Total_CMerit;
-      break;
-    case AVG_TOTAL_PRESSURE:
-      Total_ComboObj+=Weight_ObjFunc*OneD_TotalPress;
-      break;
-    case AVG_OUTLET_PRESSURE:
-      Total_ComboObj+=Weight_ObjFunc*OneD_Pressure1D;
-      break;
-    case MASS_FLOW_RATE:
-      Total_ComboObj+=Weight_ObjFunc*OneD_MassFlowRate;
-      break;
-    default:
-      break;
+    
+    switch(config->GetKind_ObjFunc(iMarker_Monitoring)) {
+      case DRAG_COEFFICIENT:
+        Total_ComboObj+=Weight_ObjFunc*(Surface_CD[iMarker_Monitoring]);
+        if (config->GetFixed_CL_Mode()) Total_ComboObj -= Weight_ObjFunc*config->GetdCD_dCL()*(Surface_CL[iMarker_Monitoring]);
+        if (config->GetFixed_CM_Mode()) Total_ComboObj -= Weight_ObjFunc*config->GetdCD_dCM()*(Surface_CMy[iMarker_Monitoring]);
+        break;
+      case LIFT_COEFFICIENT:
+        Total_ComboObj+=Weight_ObjFunc*(Surface_CL[iMarker_Monitoring]);
+        break;
+      case SIDEFORCE_COEFFICIENT:
+        Total_ComboObj+=Weight_ObjFunc*(Surface_CSF[iMarker_Monitoring]);
+        break;
+      case EFFICIENCY:
+        Total_ComboObj+=Weight_ObjFunc*(Surface_CEff[iMarker_Monitoring]);
+        break;
+      case MOMENT_X_COEFFICIENT:
+        Total_ComboObj+=Weight_ObjFunc*(Surface_CMx[iMarker_Monitoring]);
+        break;
+      case MOMENT_Y_COEFFICIENT:
+        Total_ComboObj+=Weight_ObjFunc*(Surface_CMy[iMarker_Monitoring]);
+        break;
+      case MOMENT_Z_COEFFICIENT:
+        Total_ComboObj+=Weight_ObjFunc*(Surface_CMz[iMarker_Monitoring]);
+        break;
+      case FORCE_X_COEFFICIENT:
+        Total_ComboObj+=Weight_ObjFunc*Surface_CFx[iMarker_Monitoring];
+        break;
+      case FORCE_Y_COEFFICIENT:
+        Total_ComboObj+=Weight_ObjFunc*Surface_CFy[iMarker_Monitoring];
+        break;
+      case FORCE_Z_COEFFICIENT:
+        Total_ComboObj+=Weight_ObjFunc*Surface_CFz[iMarker_Monitoring];
+        break;
+      case TOTAL_HEATFLUX:
+        Total_ComboObj+=Weight_ObjFunc*Surface_HF_Visc[iMarker_Monitoring];
+        break;
+      case MAXIMUM_HEATFLUX:
+        Total_ComboObj+=Weight_ObjFunc*Surface_MaxHF_Visc[iMarker_Monitoring];
+        break;
+        
+        /*--- The following are not per-surface, and as a result will be
+         * double-counted iff multiple surfaces are specified as well as multi-objective
+         * TODO: print a warning to the user about that possibility. ---*/
+        
+      case EQUIVALENT_AREA:
+        Total_ComboObj+=Weight_ObjFunc*Total_CEquivArea;
+        break;
+      case NEARFIELD_PRESSURE:
+        Total_ComboObj+=Weight_ObjFunc*Total_CNearFieldOF;
+        break;
+      case INVERSE_DESIGN_PRESSURE:
+        Total_ComboObj+=Weight_ObjFunc*Total_CpDiff;
+        break;
+      case INVERSE_DESIGN_HEATFLUX:
+        Total_ComboObj+=Weight_ObjFunc*Total_HeatFluxDiff;
+        break;
+      case THRUST_COEFFICIENT:
+        Total_ComboObj+=Weight_ObjFunc*Total_CT;
+        break;
+      case TORQUE_COEFFICIENT:
+        Total_ComboObj+=Weight_ObjFunc*Total_CQ;
+        break;
+      case FIGURE_OF_MERIT:
+        Total_ComboObj+=Weight_ObjFunc*Total_CMerit;
+        break;
+      case AVG_TOTAL_PRESSURE:
+        Total_ComboObj+=Weight_ObjFunc*OneD_TotalPress;
+        break;
+      case AVG_OUTLET_PRESSURE:
+        Total_ComboObj+=Weight_ObjFunc*OneD_Pressure1D;
+        break;
+      case MASS_FLOW_RATE:
+        Total_ComboObj+=Weight_ObjFunc*OneD_MassFlowRate;
+        break;
+      case CUSTOM_OBJFUNC:
+        Total_ComboObj+=Weight_ObjFunc*Total_Custom_ObjFunc;
+        break;
+      default:
+        break;
     }
   }
-
+  
 }
 
 void CEulerSolver::BC_Euler_Wall(CGeometry *geometry, CSolver **solver_container,
@@ -13034,7 +13036,9 @@ void CEulerSolver::BC_Fluid_Interface(CGeometry *geometry, CSolver **solver_cont
     if (config->GetMarker_All_KindBC(iMarker) == FLUID_INTERFACE) {
 
       for (iVertex = 0; iVertex < geometry->nVertex[iMarker]; iVertex++) {
+
         iPoint = geometry->vertex[iMarker][iVertex]->GetNode();
+        Point_Normal = geometry->vertex[iMarker][iVertex]->GetNormal_Neighbor();
 
         if (geometry->node[iPoint]->GetDomain()) {
 
@@ -13048,8 +13052,6 @@ void CEulerSolver::BC_Fluid_Interface(CGeometry *geometry, CSolver **solver_cont
           /*--- Loop over the nDonorVertexes and compute the averaged flux ---*/
 
           for (jVertex = 0; jVertex < nDonorVertex; jVertex++){
-
-            Point_Normal = geometry->vertex[iMarker][iVertex]->GetNormal_Neighbor();
 
             for (iVar = 0; iVar < nPrimVar; iVar++) {
               PrimVar_i[iVar] = node[iPoint]->GetPrimitive(iVar);
@@ -14359,6 +14361,7 @@ void CEulerSolver::LoadRestart(CGeometry **geometry, CSolver ***solver, CConfig 
   unsigned short turb_model = config->GetKind_Turb_Model();
   su2double Area_Children, Area_Parent, *Coord, *Solution_Fine;
   bool grid_movement  = config->GetGrid_Movement();
+  bool disc_adjoint = config->GetDiscrete_Adjoint();
   bool dual_time = ((config->GetUnsteady_Simulation() == DT_STEPPING_1ST) ||
                     (config->GetUnsteady_Simulation() == DT_STEPPING_2ND));
   bool steady_restart = config->GetSteadyRestart();
@@ -14500,6 +14503,11 @@ void CEulerSolver::LoadRestart(CGeometry **geometry, CSolver ***solver, CConfig 
 
   solver[MESH_0][FLOW_SOL]->Set_MPI_Solution(geometry[MESH_0], config);
   solver[MESH_0][FLOW_SOL]->Preprocessing(geometry[MESH_0], solver[MESH_0], config, MESH_0, NO_RK_ITER, RUNTIME_FLOW_SYS, false);
+
+  /* --- If frozen limiter is enabled it is not computed in the Preprocessing() routine, so we have to compute it here. ---*/
+
+  if (disc_adjoint && config->GetFrozen_Limiter_Disc())
+    SetPrimitive_Limiter(geometry[MESH_0], config);
 
   /*--- Interpolate the solution down to the coarse multigrid levels ---*/
 
@@ -15453,13 +15461,14 @@ void CNSSolver::Preprocessing(CGeometry *geometry, CSolver **solver_container, C
   su2double StrainMag = 0.0, Omega = 0.0, *Vorticity;
     
   unsigned long ExtIter     = config->GetExtIter();
-  bool adjoint              = config->GetContinuous_Adjoint();
+  bool cont_adjoint         = config->GetContinuous_Adjoint();
+  bool disc_adjoint         = config->GetDiscrete_Adjoint();
   bool implicit             = (config->GetKind_TimeIntScheme_Flow() == EULER_IMPLICIT);
-  bool center               = (config->GetKind_ConvNumScheme_Flow() == SPACE_CENTERED) || (adjoint && config->GetKind_ConvNumScheme_AdjFlow() == SPACE_CENTERED);
+  bool center               = (config->GetKind_ConvNumScheme_Flow() == SPACE_CENTERED) || (cont_adjoint && config->GetKind_ConvNumScheme_AdjFlow() == SPACE_CENTERED);
   bool center_jst           = center && config->GetKind_Centered_Flow() == JST;
-  bool limiter_flow         = ((config->GetSpatialOrder_Flow() == SECOND_ORDER_LIMITER) && (ExtIter <= config->GetLimiterIter()));
-  bool limiter_turb         = ((config->GetSpatialOrder_Turb() == SECOND_ORDER_LIMITER) && (ExtIter <= config->GetLimiterIter()));
-  bool limiter_adjflow      = ((config->GetSpatialOrder_AdjFlow() == SECOND_ORDER_LIMITER) && (ExtIter <= config->GetLimiterIter()));
+  bool limiter_flow         = ((config->GetSpatialOrder_Flow() == SECOND_ORDER_LIMITER) && (ExtIter <= config->GetLimiterIter()) && !(disc_adjoint && config->GetFrozen_Limiter_Disc()));
+  bool limiter_turb         = ((config->GetSpatialOrder_Turb() == SECOND_ORDER_LIMITER) && (ExtIter <= config->GetLimiterIter()) && !(disc_adjoint && config->GetFrozen_Limiter_Disc()));
+  bool limiter_adjflow      = (cont_adjoint && (config->GetSpatialOrder_AdjFlow() == SECOND_ORDER_LIMITER) && (ExtIter <= config->GetLimiterIter()));
   bool limiter_visc         = config->GetViscous_Limiter_Flow();
   bool fixed_cl             = config->GetFixed_CL_Mode();
   bool engine               = ((config->GetnMarker_EngineInflow() != 0) || (config->GetnMarker_EngineExhaust() != 0));
@@ -15889,8 +15898,8 @@ void CNSSolver::Friction_Forces(CGeometry *geometry, CConfig *config) {
   
   su2double Alpha           = config->GetAoA()*PI_NUMBER/180.0;
   su2double Beta            = config->GetAoS()*PI_NUMBER/180.0;
-  su2double RefAreaCoeff    = config->GetRefAreaCoeff();
-  su2double RefLengthMoment = config->GetRefLengthMoment();
+  su2double RefArea    = config->GetRefArea();
+  su2double RefLength = config->GetRefLength();
   su2double Gas_Constant    = config->GetGas_ConstantND();
   su2double *Origin         = config->GetRefOriginMoment(0);
   bool grid_movement        = config->GetGrid_Movement();
@@ -15914,7 +15923,7 @@ void CNSSolver::Friction_Forces(CGeometry *geometry, CConfig *config) {
       RefVel2  += Velocity_Inf[iDim]*Velocity_Inf[iDim];
   }
   
-  factor = 1.0 / (0.5*RefDensity*RefAreaCoeff*RefVel2);
+  factor = 1.0 / (0.5*RefDensity*RefArea*RefVel2);
   
   /*--- Variables initialization ---*/
   
@@ -16066,10 +16075,10 @@ void CNSSolver::Friction_Forces(CGeometry *geometry, CConfig *config) {
           /*--- Moment with respect to the reference axis ---*/
           
           if (iDim == 3) {
-            MomentViscous[0] += (Force[2]*MomentDist[1] - Force[1]*MomentDist[2])/RefLengthMoment;
-            MomentViscous[1] += (Force[0]*MomentDist[2] - Force[2]*MomentDist[0])/RefLengthMoment;
+            MomentViscous[0] += (Force[2]*MomentDist[1] - Force[1]*MomentDist[2])/RefLength;
+            MomentViscous[1] += (Force[0]*MomentDist[2] - Force[2]*MomentDist[0])/RefLength;
           }
-          MomentViscous[2] += (Force[1]*MomentDist[0] - Force[0]*MomentDist[1])/RefLengthMoment;
+          MomentViscous[2] += (Force[1]*MomentDist[0] - Force[0]*MomentDist[1])/RefLength;
           
         }
         

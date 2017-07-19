@@ -245,7 +245,7 @@ int main(int argc, char *argv[])
 //	md1 = 1;  //0;                // damping
 
 	A11 = 0.25*w1*w1 + md1*w1/t+1./(t*t);
-	A12 = 0.25*w1*w1          - 2./(t*t);
+	A12 = 0.5  *w1*w1          - 2./(t*t);
 	A13 = 0.25*w1*w1 - md1*w1/t+1./(t*t);
 /*
  * first mode - pitching mode
@@ -255,7 +255,7 @@ int main(int argc, char *argv[])
 //	md2 = 1;  //0;                // damping
 
 	A21 = 0.25*w2*w2 + md2*w2/t+1./(t*t);
-	A22 = 0.25*w2*w2          - 2./(t*t);
+	A22 = 0.5 *w2*w2          - 2./(t*t);
 	A23 = 0.25*w2*w2 - md2*w2/t+1./(t*t);
 /*
  * modal forces - they were recevied from SU2
