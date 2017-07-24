@@ -5370,12 +5370,15 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
  *
  *  AJNOTE: modal coordinates  - Adam Jirasek
  *  BSCW wing, two modes, mode no. 1 Plunge, mode no.2 Pitch
- *  generalized mass = 1
- *  damping = 0
  */
-          Force[1] = -(Pressure - Pressure_Inf)*Normal[1]*0.10665280000000001;  /*  Plunge,   f = 3.3*/
+          if(nDim == 2)
+            iDim = 1;
+          else
+            iDim = 2;
+
+          Force[1] = -(Pressure - Pressure_Inf)*Normal[iDim]*0.10665280000000001;  /*  Plunge,   f = 3.3*/
           ForceInviscidM[0] += Force[1];
-          Force[1] = -(Pressure - Pressure_Inf)*Normal[1]* 0.10475589716307500 * (0.4046/2.- Coord[1]) / 0.2023 ;   /*  Pitch,, f = 5.12  */
+          Force[1] = -(Pressure - Pressure_Inf)*Normal[iDim]* 0.10475589716307500 * (0.4046/2.- Coord[1]) / 0.2023 ;   /*  Pitch,, f = 5.12  */
           ForceInviscidM[1] += Force[1];         
           
 /*
