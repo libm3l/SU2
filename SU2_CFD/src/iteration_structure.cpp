@@ -2881,11 +2881,11 @@ int communicateBSCW(CConfig *config, CSolver ****solver_container, d6dof_t *angl
         const char *hostname = host.c_str();
         portno    = config->GetCoSimEnginePort();
 
-        host  = config->GetAe_Channel_O();
-        const char *name = host.c_str();
+        string host1  = config->GetAe_Channel_O();
+        const char *name = host1.c_str();
 
-        host  = config->GetAe_Channel_I();
-        const char *name1 = host.c_str();
+        string host2  = config->GetAe_Channel_I();
+        const char *name1 = host2.c_str();
 /*
  * modal forces
  */
