@@ -245,7 +245,7 @@ int main(int argc, char *argv[])
 //	md1 = 1;  //0;                // damping
 
 	A11 = 0.25*w1*w1 + md1*w1/t+1./(t*t);
-	A12 = 0.5  *w1*w1          - 2./(t*t);
+	A12 = 0.5 *w1*w1          - 2./(t*t);
 	A13 = 0.25*w1*w1 - md1*w1/t+1./(t*t);
 /*
  * first mode - pitching mode
