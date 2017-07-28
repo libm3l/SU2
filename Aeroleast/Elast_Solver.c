@@ -125,11 +125,17 @@ int main(int argc, char *argv[])
 			Q2n3 = Q2n2;
 			Q2n2 = Q2n1;
 
-			mf1_n = a;
-			mf2_n = b;
-			Q1n1 = c;
-			Q2n1 = d;
+			mf1_n = c;
+			mf2_n = d;
+			Q2n1 = a/27.264;
+			Q1n1 = b/0.1066528;
 		}
+
+                psi    = Q2n1*27.264;
+                theta  = 0;
+                phi    = 0;
+                Ytranslation = Q1n1*0.1066528;
+                printf("Initial pitching angle and plunge is %lf  %lf \n", psi, Ytranslation);
 
 
 		if( fclose (fp) != 0)
@@ -161,12 +167,6 @@ int main(int argc, char *argv[])
 			Error("client_sender: Error when opening socket");
 
 		Gnode = client_receiver(sockfd, PInpPar, (opts_t *)NULL, (opts_t *)NULL);
-	
-// 		if(m3l_Cat(Gnode, "--all", "-P", "-L",  "*",   (char *)NULL) != 0)
-// 			Error("CatData");
-// 		if(m3l_Cat(Gnode, "--detailed", "-P", "-L",  "*",   (char *)NULL) != 0)
-// 		Error("CatData");
-
 /*
  * get modal forces
  */
@@ -277,42 +277,44 @@ int main(int argc, char *argv[])
 /*
  * get new modal coordinates
  */
-//	mo1 = 1.;     // modal mass
 	Q1n1 = ((mf1_n + 2*mf1_n1 + mf1_n2)/(4*mo1) - A12*Q1n2 - A13*Q1n3)/A11;
-
-//	mo2 = 1.;     // modal mass
 	Q2n1 = ((mf2_n + 2*mf2_n1 + mf2_n2)/(4*mo2) - A22*Q2n2 - A23*Q2n3)/A21;
 /*
  * shift solution
  */
-     if( strncmp(action, "shift", 5) == 0){
+     if(restart == 1 && niter == 0){
+       printf("Skipping\n");
+     }
+     else{
+       if( strncmp(action, "shift", 5) == 0){
 
-        fprintf(fp, "%lf %lf %lf %lf %lf\n", *time, Q2n1*27.264, Q1n1*0.1066528,mf1_n,mf2_n);
-        fflush(fp);
+         fprintf(fp, "%lf %lf %lf %lf %lf\n", *time, Q2n1*27.264, Q1n1*0.1066528,mf1_n,mf2_n);
+         fflush(fp);
 
-        ++niter;
+         ++niter;
 
-        mf1_n2  = mf1_n1;
-        mf1_n1  = mf1_n;
+         mf1_n2  = mf1_n1;
+         mf1_n1  = mf1_n;
 
-        mf2_n2  = mf2_n1;
-        mf2_n1  = mf2_n;
+         mf2_n2  = mf2_n1;
+         mf2_n1  = mf2_n;
 
-        Q1n3 = Q1n2;
-        Q1n2 = Q1n1;
-        Q2n3 = Q2n2;
-        Q2n2 = Q2n1; }
+         Q1n3 = Q1n2;
+         Q1n2 = Q1n1;
+         Q2n3 = Q2n2;
+         Q2n2 = Q2n1; }
 /*
  * get pitching angle and translation
  */
-	psi    = Q2n1*27.264;
-	theta  = 0;
-	phi    = 0;
+	 psi    = Q2n1*27.264;
+	 theta  = 0;
+	 phi    = 0;
 
-        Ytranslation = Q1n1*0.1066528;
+         Ytranslation = Q1n1*0.1066528;
+       	}
 
 
-        printf("Pitching angle and plunge is %lf  %lf \n", psi, Ytranslation);
+       	printf("Pitching angle and plunge is %lf  %lf \n", psi, Ytranslation);
 
 /*
  * send modal coordinates (translation and angles) back to SU2
