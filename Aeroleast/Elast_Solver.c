@@ -302,20 +302,19 @@ int main(int argc, char *argv[])
          Q1n3 = Q1n2;
          Q1n2 = Q1n1;
          Q2n3 = Q2n2;
-         Q2n2 = Q2n1; }
+         Q2n2 = Q2n1; 
+       }
 /*
  * get pitching angle and translation
  */
-	 psi    = Q2n1*27.264;
-	 theta  = 0;
-	 phi    = 0;
+	psi    = Q2n1*27.264;
+	theta  = 0;
+	phi    = 0;
 
-         Ytranslation = Q1n1*0.1066528;
-       	}
+        Ytranslation = Q1n1*0.1066528;
+     }
 
-
-       	printf("Pitching angle and plunge is %lf  %lf \n", psi, Ytranslation);
-
+     printf("Pitching angle and plunge is %lf  %lf \n", psi, Ytranslation);
 /*
  * send modal coordinates (translation and angles) back to SU2
  * open socket for sending data back
@@ -341,15 +340,12 @@ int main(int argc, char *argv[])
 		Error("m3l_Mklist");
 	tmpfloat = (lmdouble_t *)m3l_get_data_pointer(TmpNode);
 
-	
 	tmpfloat[0] = psi;
 	tmpfloat[1] = theta;
 	tmpfloat[2] = phi;
-	
 /*
  * add Angles 
  */	
-	
 	if(  (TmpNode = m3l_Mklist("RotCenter", "D", 1, dim, &Snode, "/STR_2_CFD", "./", (char *)NULL)) == 0)
 		Error("m3l_Mklist");
 	tmpfloat = (lmdouble_t *)m3l_get_data_pointer(TmpNode);
@@ -378,7 +374,6 @@ int main(int argc, char *argv[])
  */
 	if( close(sockfd) == -1)
 		Perror("close");
-		
 
  	}
 
