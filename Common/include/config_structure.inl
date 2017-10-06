@@ -825,6 +825,8 @@ inline su2double CConfig::GetLinear_Solver_Error(void) { return Linear_Solver_Er
 
 inline unsigned long CConfig::GetLinear_Solver_Iter(void) { return Linear_Solver_Iter; }
 
+inline unsigned short CConfig::GetLinear_Solver_ILU_n(void) { return Linear_Solver_ILU_n; }
+
 inline unsigned long CConfig::GetLinear_Solver_Restart_Frequency(void) { return Linear_Solver_Restart_Frequency; }
 
 inline su2double CConfig::GetRelaxation_Factor_Flow(void) { return Relaxation_Factor_Flow; }
@@ -866,6 +868,8 @@ inline bool CConfig::GetDeform_Output(void) { return Deform_Output; }
 inline su2double CConfig::GetDeform_Tol_Factor(void) { return Deform_Tol_Factor; }
 
 inline su2double CConfig::GetDeform_Coeff(void) { return Deform_Coeff; }
+
+inline su2double CConfig::GetDeform_Limit(void) { return Deform_Limit; }
 
 inline su2double CConfig::GetDeform_ElasticityMod(void) { return Deform_ElasticityMod; }
 
