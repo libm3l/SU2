@@ -5457,9 +5457,9 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
           else
             iDim = 2;
 
-          Force[1] = -(Pressure - Pressure_Inf)*Normal[iDim]*0.10665280000000001;  /*  Plunge,   f = 3.3*/
-          ForceInviscidM[0] += Force[1];
-          Force[1] = -(Pressure - Pressure_Inf)*Normal[iDim]* 0.10475589716307500 * (0.4046/2.- Coord[1]) / 0.2023 ;   /*  Pitch,, f = 5.12  */
+          Force[0] = -(Pressure - Pressure_Inf)*Normal[iDim]*0.10665280000000001;  /*  Plunge,   f = 3.3*/
+          ForceInviscidM[0] += Force[0];
+          Force[1] = -(Pressure - Pressure_Inf)*Normal[iDim]* 0.10475589716307500 * (0.4046/2.- Coord[0]) / 0.2023 ;   /*  Pitch,, f = 5.12  */
           ForceInviscidM[1] += Force[1];         
           
 /*
