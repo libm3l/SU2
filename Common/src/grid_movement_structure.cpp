@@ -2524,8 +2524,6 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
   dy   = motion_data->transvec[1];
   dz   = motion_data->transvec[2];  
 
-  dz = 0;
-
   if(nDim == 3){
      dthetao    = -motion_data_old->angles[2]*3.1415926/180.;  // pitch
      dphio      = -motion_data_old->angles[1]*3.1415926/180.;  // roll
@@ -2717,7 +2715,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 // 			geometry->node[iPoint]->SetCoord(1, yn + motion_data->rotcenter[1]);
 
             		xn = xn + 0.4046/2.; 
-                        yn = yn + dy;  
+                        yn = yn + dz;  
             		geometry->node[iPoint]->SetCoord(0, xn);      
  			geometry->node[iPoint]->SetCoord(1, yn); 
 		}
