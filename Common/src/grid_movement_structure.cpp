@@ -2497,6 +2497,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 	su2double dtheta, dphi, dpsi, cosTheta, sinTheta, cosThetao, sinThetao,sinPsio,cosPsio;
 	su2double cosPhi, sinPhi,cosPhio, sinPhio, cosPsi, sinPsi,x,xn,y,z,yn,xno,yno;
 	su2double rotXold, rotYold, rotZold,dthetao, dphio, dpsio, dx, dy, dz, dxo,dyo,dzo;
+	su2double rotX, rotY, rotZ;
 
 	/*--- Problem dimension  ---*/
 
@@ -2523,7 +2524,6 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
   dy   = motion_data->transvec[1];
   dz   = motion_data->transvec[2];  
 
-  dy = 0;
   dz = 0;
 
   if(nDim == 3){
@@ -2539,12 +2539,17 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
      rotYold = motion_data_old->rotcenter[1];
      rotZold = motion_data_old->rotcenter[2];
 
+     rotX = rotXold;
+     rotY = rotYold;
+     rotZ = rotZold;
+
      rotXold = 0.4046/2.;
      rotYold = 0.;
      rotZold = 0.;
 
-     dxo = 0;
-     dyo = 0;
+     dxo   = motion_data_old->transvec[0];
+     dyo   = motion_data_old->transvec[1];
+     dzo   = motion_data_old->transvec[2];
 	
      /* Compute sines/cosines. ---*/
    
@@ -2590,9 +2595,9 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 		Coord   = geometry->node[iPoint]->GetCoord(); 
    
     /*--- Calculate non-dim. position from rotation center ---*/
-		x = (Coord[0]+rotXold-dxo);
-		y = (Coord[1]+rotYold-dyo);
-		z = (Coord[2]+rotZold-dzo);
+		x = (Coord[0]-rotXold-dxo);
+		y = (Coord[1]-rotYold-dyo);
+		z = (Coord[2]-rotZold-dzo);
 			
   /*--- Compute transformed point coordinates ---*/
 		r[0] = rotMatrixo[0][0]*x 
@@ -2606,6 +2611,10 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 		r[2] = rotMatrixo[2][0]*x 
 		+ rotMatrixo[2][1]*y 
 		+ rotMatrixo[2][2]*z;
+
+		r[0] = (r[0]+rotXold+dxo-rotX);
+		r[1] = (r[1]+rotYold+dyo-rotY);
+		r[2] = (r[2]+rotZold+dzo-rotZ);
   
     /*--- Compute transformed point coordinates ---*/
 		rotCoord[0] = rotMatrix[0][0]*r[0] 
@@ -2647,6 +2656,9 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
            cosPsio = cos(dpsio);
            sinPsio = sin(dpsio);
 
+           dxo   = motion_data_old->transvec[0];
+           dyo   = motion_data_old->transvec[2];
+
 	/*--- Loop over and rotate each node in the volume mesh ---*/
 		
 	   if(status_run == 1){
@@ -2665,6 +2677,10 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
     /*--- Compute transformed point coordinates ---*/
 			xno =  cosPsio*x  + sinPsio*y ;
 			yno = -sinPsio*x  + cosPsio*y ;
+
+// 			xno = (xno+rotXold-dxo);
+// 			yno = (yno+rotYold-dyo);
+
 			xn =  cosPsi*xno  - sinPsi*yno ;
 			yn = +sinPsi*xno  + cosPsi*yno ;
 
@@ -2674,7 +2690,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 /*			geometry->node[iPoint]->SetCoord(0, xn + motion_data->rotcenter[0]+dx);      
 			geometry->node[iPoint]->SetCoord(1, yn + motion_data->rotcenter[1]+dy); */  
 
-                        xn = xn +0.4046/2.;   
+                        xn = xn + 0.4046/2.;   
                         yn = yn + dz;
 
  			geometry->node[iPoint]->SetCoord(0, xn);      
@@ -2687,7 +2703,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 			Coord   = geometry->node[iPoint]->GetCoord(); 
 
             		xn = Coord[0] - 0.4046/2.; 
-                        yn = Coord[1] - dy ;
+                        yn = Coord[1] - dyo ;
    
     /*--- Calculate non-dim. position from rotation center ---*/
 
