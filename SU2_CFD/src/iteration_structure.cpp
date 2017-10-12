@@ -215,7 +215,7 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
 
 
      if ( (COMMITER != 0 &&  config_container[val_iZone]->GetExtIter() % COMMITER == 0) || COMMITER == 0 ){
-
+       
       if (rank == MASTER_NODE){
  /*
   * MASTER node communicate with external solver
@@ -229,7 +229,7 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
  */
 
      if( communicateBSCW(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn, "shift", COMMITER) != 0)
-         Error("Communicate()");  
+         Error("Communicate()");
 /*
  * ==========================  end of BSCW wing test case modification ======================
  */      
@@ -262,7 +262,7 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
       SU2_MPI::Bcast(p_6DOFdata->rotcenter, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
       SU2_MPI::Bcast(p_6DOFdata->transvec, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
 #endif
-
+         
 /*
  * Save motion data, they are needed to transform the mesh back to its original position
  * during next step transformation
@@ -271,7 +271,7 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
 /*
  * if static aeorelast and initial iteration set all variables to 0
  */
-        p_6DOFdata->rotcenter[0] = 0.2023;
+        p_6DOFdata->rotcenter[0] = 0.2032;
         p_6DOFdata->rotcenter[1] = 0;
         p_6DOFdata->rotcenter[2] = 0;
 
@@ -294,15 +294,15 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
       config_container[val_iZone]->SetTranslation_X(val_iZone,p_6DOFdata->transvec[0]);
       config_container[val_iZone]->SetTranslation_Y(val_iZone,p_6DOFdata->transvec[1]);
       config_container[val_iZone]->SetTranslation_Z(val_iZone,p_6DOFdata->transvec[2]);
-            
+
       if(ExtIter == 0)
-/*
- * if the very first iteration, do not transform mesh back, it is in original position
- */
-         grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
+        /*
+         * if the very first iteration, do not transform mesh back, it is in original position
+         */
+        grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
                                     config_container[val_iZone], val_iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,0);
        else
-         grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
+        grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
                                     config_container[val_iZone], val_iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,1);
 	 
      if (COMMITER == 0 ){ 
@@ -322,6 +322,22 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
        including computing the grid velocities on the coarser levels. ---*/
       
       grid_movement[val_iZone]->UpdateMultiGrid(geometry_container[val_iZone], config_container[val_iZone]);
+      
+//      // cspode 2017-10-08
+//      if (rank == MASTER_NODE){
+//        cout << "Depois da UpdateMultiGrid: " << endl;
+//        cout << "p_6DOFdata_transvec[0] = " << p_6DOFdata->transvec[0] << endl;
+//        cout << "p_6DOFdata_transvec[1] = " << p_6DOFdata->transvec[1] << endl;
+//        cout << "p_6DOFdata_transvec[2] = " << p_6DOFdata->transvec[2] << endl;
+//        
+//        cout << "p_6DOFdata_rotcenter[0] = " << p_6DOFdata->rotcenter[0] << endl;
+//        cout << "p_6DOFdata_rotcenter[1] = " << p_6DOFdata->rotcenter[1] << endl;
+//        cout << "p_6DOFdata_rotcenter[2] = " << p_6DOFdata->rotcenter[2] << endl;
+//
+//        cout << "p_6DOFdata_angles[0] = " << p_6DOFdata->angles[0] << endl;
+//        cout << "p_6DOFdata_angles[1] = " << p_6DOFdata->angles[1] << endl;
+//        cout << "p_6DOFdata_angles[2] = " << p_6DOFdata->angles[2] << endl;
+//      }
 
     break;
 

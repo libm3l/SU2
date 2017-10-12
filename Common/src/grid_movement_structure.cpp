@@ -2502,13 +2502,13 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 	/*--- Problem dimension  ---*/
 
 	nDim = geometry->GetnDim();
-
-
+    
+    
 /*
  * ==========================  BSCW wing test case modification ======================    
  *  
  * this function is modified to fit the BSCW wing which has a fixed rotation around 
- * 0.2023  0   0 point (units are meters)
+ * 0.2032  0   0 point (units are meters)
  */
 
 /*  psi   - yaw
@@ -2522,7 +2522,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 
   dx   = motion_data->transvec[0];
   dy   = motion_data->transvec[1];
-  dz   = motion_data->transvec[2];  
+  dz   = motion_data->transvec[2];
 
   if(nDim == 3){
      dthetao    = -motion_data_old->angles[2]*3.1415926/180.;  // pitch
@@ -2541,7 +2541,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
      rotY = rotYold;
      rotZ = rotZold;
 
-     rotXold = 0.4046/2.;
+     rotXold = 0.4064/2.;
      rotYold = 0.;
      rotZold = 0.;
 
@@ -2643,7 +2643,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
            dpsio   = motion_data_old->angles[0]*3.1415926/180.;  // pitch
            dyo     = motion_data_old->transvec[2];
 
-           rotXold = 0.44046/2.;  //motion_data_old->rotcenter[0];
+           rotXold = 0.4064/2.;  //motion_data_old->rotcenter[0];
            rotYold = 0.;                //motion_data_old->rotcenter[1];
      
 	/* Compute sines/cosines. ---*/
@@ -2669,7 +2669,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
     /*--- Calculate non-dim. position from rotation center ---*/
 // 			x = (Coord[0]-rotXold-dxo);
 // 			y = (Coord[1]-rotYold-dyo);
-			x = (Coord[0]-0.4046/2.);
+			x = (Coord[0]-0.4064/2.);
 			y = (Coord[1]-dyo);
   
     /*--- Compute transformed point coordinates ---*/
@@ -2688,7 +2688,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 /*			geometry->node[iPoint]->SetCoord(0, xn + motion_data->rotcenter[0]+dx);      
 			geometry->node[iPoint]->SetCoord(1, yn + motion_data->rotcenter[1]+dy); */  
 
-                        xn = xn + 0.4046/2.;   
+                        xn = xn +0.4064/2.;   
                         yn = yn + dz;
 
  			geometry->node[iPoint]->SetCoord(0, xn);      
@@ -2714,7 +2714,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 // 			geometry->node[iPoint]->SetCoord(0, xn + motion_data->rotcenter[0]);      
 // 			geometry->node[iPoint]->SetCoord(1, yn + motion_data->rotcenter[1]);
 
-            		xn = xn + 0.4046/2.; 
+            		xn = xn +0.4064/2.; 
                         yn = yn + dz;  
             		geometry->node[iPoint]->SetCoord(0, xn);      
  			geometry->node[iPoint]->SetCoord(1, yn); 
