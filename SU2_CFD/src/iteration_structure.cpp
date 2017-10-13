@@ -323,21 +323,6 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
       
       grid_movement[val_iZone]->UpdateMultiGrid(geometry_container[val_iZone], config_container[val_iZone]);
       
-//      // cspode 2017-10-08
-//      if (rank == MASTER_NODE){
-//        cout << "Depois da UpdateMultiGrid: " << endl;
-//        cout << "p_6DOFdata_transvec[0] = " << p_6DOFdata->transvec[0] << endl;
-//        cout << "p_6DOFdata_transvec[1] = " << p_6DOFdata->transvec[1] << endl;
-//        cout << "p_6DOFdata_transvec[2] = " << p_6DOFdata->transvec[2] << endl;
-//        
-//        cout << "p_6DOFdata_rotcenter[0] = " << p_6DOFdata->rotcenter[0] << endl;
-//        cout << "p_6DOFdata_rotcenter[1] = " << p_6DOFdata->rotcenter[1] << endl;
-//        cout << "p_6DOFdata_rotcenter[2] = " << p_6DOFdata->rotcenter[2] << endl;
-//
-//        cout << "p_6DOFdata_angles[0] = " << p_6DOFdata->angles[0] << endl;
-//        cout << "p_6DOFdata_angles[1] = " << p_6DOFdata->angles[1] << endl;
-//        cout << "p_6DOFdata_angles[2] = " << p_6DOFdata->angles[2] << endl;
-//      }
 
     break;
 

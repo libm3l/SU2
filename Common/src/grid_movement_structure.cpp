@@ -2529,7 +2529,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
      dphio      = -motion_data_old->angles[1]*3.1415926/180.;  // roll
      dpsio      = -motion_data_old->angles[0]*3.1415926/180.;  // yaw
 
-     dxo   = 0.4046/2.; //motion_data->transvec[0];
+     dxo   = 0.4064/2.; //motion_data->transvec[0];
      dyo   = 0; //motion_data->transvec[1];
      dzo   = 0; //motion_data->transvec[2]; 
      
@@ -2633,7 +2633,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 //		geometry->node[iPoint]->SetCoord(1, rotCoord[1] + motion_data->rotcenter[1]+dy);      
 //		geometry->node[iPoint]->SetCoord(2, rotCoord[2] + motion_data->rotcenter[2]+dz); 
 
-		geometry->node[iPoint]->SetCoord(0, rotCoord[0] + 0.4046/2.+dx);      
+		geometry->node[iPoint]->SetCoord(0, rotCoord[0] + 0.4064/2.+dx);      
 		geometry->node[iPoint]->SetCoord(1, rotCoord[1]+dy);      
 		geometry->node[iPoint]->SetCoord(2, rotCoord[2]+dz);      
 	}
@@ -2700,7 +2700,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 /*--- Coordinates of the current point ---*/
 			Coord   = geometry->node[iPoint]->GetCoord(); 
 
-            		xn = Coord[0] - 0.4046/2.; 
+            		xn = Coord[0] - 0.4064/2.; 
                         yn = Coord[1] - dyo ;
    
     /*--- Calculate non-dim. position from rotation center ---*/

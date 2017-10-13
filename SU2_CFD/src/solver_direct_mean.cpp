@@ -5458,6 +5458,7 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
             iDim = 2;
 
           ForceInviscidM[0] += -(Pressure - Pressure_Inf)*Normal[iDim]*0.096153176967948;  /*  Plunge 2D */
+          /* Be sure about the sign of the modal force, otherwise the computation is not correct*/
           ForceInviscidM[1] += -(Pressure - Pressure_Inf)*Normal[iDim]* 0.464625688784754 * (0.2032 - Coord[0]) ;   /*  Pitch 2D */        
 
 /*

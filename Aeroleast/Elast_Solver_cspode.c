@@ -87,8 +87,10 @@ int main(int argc, char *argv[]) {
   lmdouble_t plunge;
   lmdouble_t gamma;
   lmdouble_t betha;
-
-
+  
+  // Structural parameters
+  lmdouble_t mode_1, mode_2;
+          
   lmdouble_t a, b, c, d, timef, count;
 
   find_t *SFounds;
@@ -150,6 +152,15 @@ int main(int argc, char *argv[]) {
         md1 = 0.0;
         md2 = 0.0;
         
+        f1 = 3.32991158567781;  // frequency
+        w1 = 2*3.1415926*f1;
+        
+        f2 = 5.19961338983582;   // frequency
+        w2 = 2*3.1415926*f2;
+        
+        mode_1 = 0.096153176967948;                    // Eigenvector for plunge   
+        mode_2 = -0.464625688784754*180.0/3.141592654; // Eigenvector for pitch
+       
         /*
          * Newmark Method constants
          */
@@ -181,14 +192,14 @@ int main(int argc, char *argv[]) {
 
 			mf1_n = c;
 			mf2_n = d;
-			Q2n1 = a/27.264;
-			Q1n1 = b/0.1066528;
+			Q2n1 = a/mode_2;
+			Q1n1 = b/mode_1;
 		}
 
-                psi    = Q2n1*27.264;
+                psi    = Q2n1*mode_2;
                 theta  = 0;
                 phi    = 0;
-                Ytranslation = Q1n1*0.1066528;
+                Ytranslation = Q1n1*mode_1;
                 printf("Initial pitching angle and plunge is %lf  %lf \n", psi, Ytranslation);
 
 		if( fclose (fp) != 0)
@@ -291,24 +302,6 @@ int main(int argc, char *argv[]) {
           dt = *comfreq*dt;
         }
 /*
- * first mode - plunging mode
- */          
-	printf("Time step is %lf \n", dt);
-	f1 = 3.33000000000000;  // frequency
-	w1 = 2*3.1415926*f1;
-	A11 = 0.25*w1*w1 + md1*w1/dt+1./(dt*dt);
-	A12 = 0.5 *w1*w1          - 2./(dt*dt);
-	A13 = 0.25*w1*w1 - md1*w1/dt+1./(dt*dt);
-       
-/*
- * first mode - pitching mode
- */
-	f2 = 5.2000000000000;   // frequency
-	w2 = 2*3.1415926*f2;
-	A21 = 0.25*w2*w2 + md2*w2/dt+1./(dt*dt);
-	A22 = 0.5 *w2*w2          - 2./(dt*dt);
-	A23 = 0.25*w2*w2 - md2*w2/dt+1./(dt*dt);
-/*
  * modal forces - they were recevied from SU2
  */
 	mf1_n = ModalForce[0];
@@ -322,21 +315,12 @@ int main(int argc, char *argv[]) {
            Perror("fopen");
        printf(" Nullifying \n");
        
-       mf1_n=0;
-       mf2_n=0;
+//       mf1_n=0;
+//       mf2_n=0;
        
     }
     
-      
-
 /*
- * get new modal coordinates
- */
-	Q1n1 = ((mf1_n + 2*mf1_n1 + mf1_n2)/(4*mo1) - A12*Q1n2 - A13*Q1n3)/A11;
-	Q2n1 = ((mf2_n + 2*mf2_n1 + mf2_n2)/(4*mo2) - A22*Q2n2 - A23*Q2n3)/A21;
-    
-    
-    /*
      * Newmark mode 1 - Plunge
      * cspode - 2017-09-30
      */
@@ -382,7 +366,7 @@ int main(int argc, char *argv[]) {
     q2_dot_np1 = b21 + b22;
     q2_np1     = b23 + b24;
     
-    printf("Rodando Versao CSPODE \n");
+    printf("Rodando Versao CSPODE mod - somente pitch \n");
 
     /*
      * shift solution
@@ -398,8 +382,8 @@ int main(int argc, char *argv[]) {
 //
 //        analitic_plunge = exp(-md1 * w1 * (*time))*((0.0 * cos(wd * (*time))+((10.0 * 3.1415926 / 180.0 + md1 * w1 * 0.0) / wd) * sin(wd * (*time))));
 //
-//        fprintf(fp, "%lf %lf %lf %lf %lf %lf  %lf\n", *time, Q2n2 * 27.264, Q1n2, mf1_n, mf2_n, q2_n, analitic_plunge);
-        fprintf(fp, "%lf %lf %lf %lf %lf %lf %lf \n", *time, Q2n1 * 27.264, Q1n1*0.1066528, mf1_n, mf2_n, q2_np1* 27.264, q1_np1*0.1066528);
+//        fprintf(fp, "%lf %lf %lf %lf %lf %lf  %lf\n", *time, Q2n2 * mode_2, Q1n2, mf1_n, mf2_n, q2_n, analitic_plunge);
+        fprintf(fp, "%lf %lf %lf %lf %lf \n", *time, p2_np1, p1_np1, q2_np1* mode_2, q1_np1*mode_1);
 
         fflush(fp);
 
@@ -410,11 +394,6 @@ int main(int argc, char *argv[]) {
 
         mf2_n2 = mf2_n1;
         mf2_n1 = mf2_n;
-
-        Q1n3 = Q1n2;
-        Q1n2 = Q1n1;
-        Q2n3 = Q2n2;
-        Q2n2 = Q2n1;
 
         q1_n = q1_np1;
         q1_dot_n = q1_dot_np1;
@@ -428,13 +407,13 @@ int main(int argc, char *argv[]) {
       /*
        * get pitching angle and translation
        */
-      // cspode 2017-09-30 para verificar equacoes - remover!!!
-      psi = q2_np1 * 27.264;
+      psi = q2_np1 * mode_2;
       theta = 0.0;
       phi = 0.0;
-      Ytranslation = q1_np1 * 0.1066528;
+      Ytranslation = q1_np1 * mode_1;
     }
 
+     printf("Cl and Cm are %lf  %lf \n", p1_np1/(mode_1*8082.32803*0.4064), p2_np1/(0.464625688784754*8082.32803*0.4064*0.4064));
      printf("Pitching angle and plunge is %lf  %lf \n", psi, Ytranslation);
 /*
  * send modal coordinates (translation and angles) back to SU2
@@ -465,7 +444,7 @@ int main(int argc, char *argv[]) {
 	tmpfloat[1] = theta;
 	tmpfloat[2] = phi;
 /*
- * add Angles 
+ * add RotCenter
  */	
 	if(  (TmpNode = m3l_Mklist("RotCenter", "D", 1, dim, &Snode, "/STR_2_CFD", "./", (char *)NULL)) == 0)
 		Error("m3l_Mklist");
