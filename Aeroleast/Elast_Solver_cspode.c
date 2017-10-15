@@ -424,7 +424,7 @@ int main(int argc, char *argv[]) {
       plunge = q1_np1 * mode_1;
     }
 
-     printf("Cl and Cm are %lf  %lf \n", p1_np1/(mode_1*3632.50698*0.33032192), p2_np1/(0.464625688784754*3632.50698*0.4064*0.33032192));
+     printf("Cl and Cm are %lf  %lf \n", p1_np1/(mode_1*8082.32803*0.33032192), p2_np1/(-0.515360786731372*8082.32803*0.4064*0.33032192));
      printf("Pitching angle and plunge is %lf  %lf \n", phi, plunge);
 /*
  * send modal coordinates (translation and angles) back to SU2
