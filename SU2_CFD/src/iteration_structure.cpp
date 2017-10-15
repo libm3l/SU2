@@ -201,9 +201,9 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
   * rotational angles, displacement and rotation center
   * before getting new values, save old ones
   */
-      p_6DOFdata_old->angles[0] = config_container[val_iZone]->GetYaw(val_iZone);
+      p_6DOFdata_old->angles[0] = config_container[val_iZone]->GetRoll(val_iZone);
       p_6DOFdata_old->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
-      p_6DOFdata_old->angles[2] = config_container[val_iZone]->GetRoll(val_iZone);
+      p_6DOFdata_old->angles[2] = config_container[val_iZone]->GetYaw(val_iZone);
 
       p_6DOFdata_old->transvec[0] = config_container[val_iZone]->GetTranslation_X(val_iZone);
       p_6DOFdata_old->transvec[1] = config_container[val_iZone]->GetTranslation_Y(val_iZone);
@@ -241,9 +241,9 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
       else
       {
 
-      p_6DOFdata->angles[0] = config_container[val_iZone]->GetYaw(val_iZone);
+      p_6DOFdata->angles[0] = config_container[val_iZone]->GetRoll(val_iZone);
       p_6DOFdata->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
-      p_6DOFdata->angles[2] = config_container[val_iZone]->GetRoll(val_iZone);
+      p_6DOFdata->angles[2] = config_container[val_iZone]->GetYaw(val_iZone);
 
       p_6DOFdata->transvec[0] = config_container[val_iZone]->GetTranslation_X(val_iZone);
       p_6DOFdata->transvec[1] = config_container[val_iZone]->GetTranslation_Y(val_iZone);
@@ -287,36 +287,36 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
       config_container[val_iZone]->SetMotion_Origin_Y(val_iZone,p_6DOFdata->rotcenter[1]);
       config_container[val_iZone]->SetMotion_Origin_Z(val_iZone,p_6DOFdata->rotcenter[2]);
       
-      config_container[val_iZone]->SetYaw(val_iZone,p_6DOFdata->angles[0]);
+      config_container[val_iZone]->SetRoll(val_iZone,p_6DOFdata->angles[0]);
       config_container[val_iZone]->SetPitch(val_iZone,p_6DOFdata->angles[1]);
-      config_container[val_iZone]->SetRoll(val_iZone,p_6DOFdata->angles[2]);
+      config_container[val_iZone]->SetYaw(val_iZone,p_6DOFdata->angles[2]);
 
       config_container[val_iZone]->SetTranslation_X(val_iZone,p_6DOFdata->transvec[0]);
       config_container[val_iZone]->SetTranslation_Y(val_iZone,p_6DOFdata->transvec[1]);
       config_container[val_iZone]->SetTranslation_Z(val_iZone,p_6DOFdata->transvec[2]);
 
-      if(ExtIter == 0)
+      if (ExtIter == 0) {
         /*
          * if the very first iteration, do not transform mesh back, it is in original position
          */
         grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
-                                    config_container[val_iZone], val_iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,0);
-       else
+                config_container[val_iZone], val_iZone, ExtIter, p_6DOFdata, p_6DOFdata_old, 0);
+      } else {
         grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
-                                    config_container[val_iZone], val_iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,1);
-	 
-     if (COMMITER == 0 ){ 
-/* 
- * if communicating every step, calculate grid velocity
- */
-      geometry_container[val_iZone][MESH_0]->SetGridVelocity(config_container[val_iZone], ExtIter);
-     }
-     else{
-/* 
- * .. otherwise consider as steady aeroelasticity and nullify all grid velocities
- */
-      geometry_container[val_iZone][MESH_0]->SetGridVelocity(config_container[val_iZone], 0);
-     }
+                config_container[val_iZone], val_iZone, ExtIter, p_6DOFdata, p_6DOFdata_old, 1);
+      }
+      
+     if (COMMITER == 0) {
+        /* 
+         * if communicating every step, calculate grid velocity
+         */
+        geometry_container[val_iZone][MESH_0]->SetGridVelocity(config_container[val_iZone], ExtIter);
+      } else {
+        /* 
+         * .. otherwise consider as steady aeroelasticity and nullify all grid velocities
+         */
+        geometry_container[val_iZone][MESH_0]->SetGridVelocity(config_container[val_iZone], 0);
+      }
       
       /*--- Update the multigrid structure after moving the finest grid,
        including computing the grid velocities on the coarser levels. ---*/

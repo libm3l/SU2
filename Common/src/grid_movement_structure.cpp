@@ -2491,6 +2491,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 	/*--- Local variables ---*/
 	unsigned short nDim; 
 	unsigned long iPoint;
+    su2double DEG2RAD = PI_NUMBER/180.0;
 	su2double r[3] = {0.0,0.0,0.0}, rotCoord[3] = {0.0,0.0,0.0}, *Coord;
 	su2double rotMatrix[3][3] = {{0.0,0.0,0.0}, {0.0,0.0,0.0}, {0.0,0.0,0.0}};
 	su2double rotMatrixo[3][3] = {{0.0,0.0,0.0}, {0.0,0.0,0.0}, {0.0,0.0,0.0}};
@@ -2511,93 +2512,92 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
  * 0.2032  0   0 point (units are meters)
  */
 
-/*  psi   - yaw
- *  theta - pitch
- *  phi   - roll
+/* SU2 uses a little differente convention for Euler angles. The traditional is: 
+ * psi   - yaw
+ * theta - pitch
+ * phi   - roll
+ * But SU2 uses the follow instead:
+ * theta -> roll
+ * phi -> pitch
+ * psi -> yaw
  */
 	
-  dtheta = motion_data->angles[2]*3.1415926/180.;   // pitch 
-  dphi   = motion_data->angles[1]*3.1415926/180.;  // roll
-  dpsi   = motion_data->angles[0]*3.1415926/180.;  // yaw  
+  dtheta = motion_data->angles[0]*DEG2RAD;   // roll 
+  dphi   = motion_data->angles[1]*DEG2RAD;  // pitch
+  dpsi   = motion_data->angles[2]*DEG2RAD;  // yaw  
 
   dx   = motion_data->transvec[0];
   dy   = motion_data->transvec[1];
   dz   = motion_data->transvec[2];
 
-  if(nDim == 3){
-     dthetao    = -motion_data_old->angles[2]*3.1415926/180.;  // pitch
-     dphio      = -motion_data_old->angles[1]*3.1415926/180.;  // roll
-     dpsio      = -motion_data_old->angles[0]*3.1415926/180.;  // yaw
+  dthetao = -motion_data_old->angles[0]*DEG2RAD; // roll
+  dphio   = -motion_data_old->angles[1]*DEG2RAD; // pitch
+  dpsio   = -motion_data_old->angles[2]*DEG2RAD; // yaw
 
-     dxo   = 0.4064/2.; //motion_data->transvec[0];
-     dyo   = 0; //motion_data->transvec[1];
-     dzo   = 0; //motion_data->transvec[2]; 
-     
-     rotXold = motion_data_old->rotcenter[0];
-     rotYold = motion_data_old->rotcenter[1];
-     rotZold = motion_data_old->rotcenter[2];
+  dxo = motion_data_old->transvec[0];
+  dyo = motion_data_old->transvec[1];
+  dzo = motion_data_old->transvec[2];
 
-     rotX = rotXold;
-     rotY = rotYold;
-     rotZ = rotZold;
+  rotXold = motion_data_old->rotcenter[0];
+  rotYold = motion_data_old->rotcenter[1];
+  rotZold = motion_data_old->rotcenter[2];
 
-     rotXold = 0.4064/2.;
-     rotYold = 0.;
-     rotZold = 0.;
+  rotX = rotXold;
+  rotY = rotYold;
+  rotZ = rotZold;
 
-     dxo   = motion_data_old->transvec[0];
-     dyo   = motion_data_old->transvec[1];
-     dzo   = motion_data_old->transvec[2];
-	
-     /* Compute sines/cosines. ---*/
-   
-     cosTheta = cos(dtheta);  cosPhi = cos(dphi);  cosPsi = cos(dpsi);
-     sinTheta = sin(dtheta);  sinPhi = sin(dphi);  sinPsi = sin(dpsi);
+//   cout << "rotXold = " << rotXold << "  rotYold = " << rotYold << "  rotZold = " << rotZold << endl;
+//   cout << "rotX    = " << rotX    << "  rotY    = " << rotY    << "  rotZ    = " << rotZ    << endl;
 
-     cosThetao = cos(dthetao);  cosPhio = cos(dphio);  cosPsio = cos(dpsio);
-     sinThetao = sin(dthetao);  sinPhio = sin(dphio);  sinPsio = sin(dpsio);
+   /* Compute sines/cosines. ---*/
 
+   cosTheta = cos(dtheta);  cosPhi = cos(dphi);  cosPsi = cos(dpsi);
+   sinTheta = sin(dtheta);  sinPhi = sin(dphi);  sinPsi = sin(dpsi);
+
+   cosThetao = cos(dthetao);  cosPhio = cos(dphio);  cosPsio = cos(dpsio);
+   sinThetao = sin(dthetao);  sinPhio = sin(dphio);  sinPsio = sin(dpsio);
+
+  /*--- Compute the rotation matrix. Note that the implicit
+ ordering is rotation about the x-axis, y-axis, then z-axis. ---*/
+
+  rotMatrix[0][0] = cosPhi*cosPsi;
+  rotMatrix[1][0] = cosPhi*sinPsi;
+  rotMatrix[2][0] = -sinPhi;
+
+  rotMatrix[0][1] = sinTheta*sinPhi*cosPsi - cosTheta*sinPsi;
+  rotMatrix[1][1] = sinTheta*sinPhi*sinPsi + cosTheta*cosPsi;
+  rotMatrix[2][1] = sinTheta*cosPhi;
+
+  rotMatrix[0][2] = cosTheta*sinPhi*cosPsi + sinTheta*sinPsi;
+  rotMatrix[1][2] = cosTheta*sinPhi*sinPsi - sinTheta*cosPsi;
+  rotMatrix[2][2] = cosTheta*cosPhi;
+
+  rotMatrixo[0][0] = cosPhio*cosPsio;
+  rotMatrixo[1][0] = cosPhio*sinPsio;
+  rotMatrixo[2][0] = -sinPhio;
+
+  rotMatrixo[0][1] = sinThetao*sinPhio*cosPsio - cosThetao*sinPsio;
+  rotMatrixo[1][1] = sinThetao*sinPhio*sinPsio + cosThetao*cosPsio;
+  rotMatrixo[2][1] = sinThetao*cosPhio;
+
+  rotMatrixo[0][2] = cosThetao*sinPhio*cosPsio + sinThetao*sinPsio;
+  rotMatrixo[1][2] = cosThetao*sinPhio*sinPsio - sinThetao*cosPsio;
+  rotMatrixo[2][2] = cosThetao*cosPhio;
   
-	/*--- Compute the rotation matrix. Note that the implicit
-   ordering is rotation about the x-axis, y-axis, then z-axis. ---*/
-	
-		
-	rotMatrix[0][0] = cosPhi*cosPsi;
-	rotMatrix[1][0] = cosPhi*sinPsi;
-	rotMatrix[2][0] = -sinPhi;
-  
-	rotMatrix[0][1] = sinTheta*sinPhi*cosPsi - cosTheta*sinPsi;
-	rotMatrix[1][1] = sinTheta*sinPhi*sinPsi + cosTheta*cosPsi;
-	rotMatrix[2][1] = sinTheta*cosPhi;
-  
-	rotMatrix[0][2] = cosTheta*sinPhi*cosPsi + sinTheta*sinPsi;
-	rotMatrix[1][2] = cosTheta*sinPhi*sinPsi - sinTheta*cosPsi;
-	rotMatrix[2][2] = cosTheta*cosPhi;
-		
-	rotMatrixo[0][0] = cosPhio*cosPsio;
-	rotMatrixo[1][0] = cosPhio*sinPsio;
-	rotMatrixo[2][0] = -sinPhio;
-  
-	rotMatrixo[0][1] = sinThetao*sinPhio*cosPsio - cosThetao*sinPsio;
-	rotMatrixo[1][1] = sinThetao*sinPhio*sinPsio + cosThetao*cosPsio;
-	rotMatrixo[2][1] = sinThetao*cosPhio;
-  
-	rotMatrixo[0][2] = cosThetao*sinPhio*cosPsio + sinThetao*sinPsio;
-	rotMatrixo[1][2] = cosThetao*sinPhio*sinPsio - sinThetao*cosPsio;
-	rotMatrixo[2][2] = cosThetao*cosPhio;
-  
+  if(nDim == 3){  // if is a 3D case do the follow
+    
 /*--- Loop over and rotate each node in the volume mesh ---*/
 	for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++) {
 	
 /*--- Coordinates of the current point ---*/
 		Coord   = geometry->node[iPoint]->GetCoord(); 
    
-    /*--- Calculate non-dim. position from rotation center ---*/
+    /*--- Move to rotation center old ---*/
 		x = (Coord[0]-rotXold-dxo);
 		y = (Coord[1]-rotYold-dyo);
 		z = (Coord[2]-rotZold-dzo);
 			
-  /*--- Compute transformed point coordinates ---*/
+  /*--- Rotate to old position (e.g. zero deform - original position) ---*/
 		r[0] = rotMatrixo[0][0]*x 
 		+ rotMatrixo[0][1]*y 
 		+ rotMatrixo[0][2]*z;
@@ -2610,11 +2610,7 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 		+ rotMatrixo[2][1]*y 
 		+ rotMatrixo[2][2]*z;
 
-		r[0] = (r[0]+rotXold+dxo-rotX);
-		r[1] = (r[1]+rotYold+dyo-rotY);
-		r[2] = (r[2]+rotZold+dzo-rotZ);
-  
-    /*--- Compute transformed point coordinates ---*/
+    /*--- Rotate to new position ---*/
 		rotCoord[0] = rotMatrix[0][0]*r[0] 
 		+ rotMatrix[0][1]*r[1] 
 		+ rotMatrix[0][2]*r[2];
@@ -2626,101 +2622,93 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
 		rotCoord[2] = rotMatrix[2][0]*r[0] 
 		+ rotMatrix[2][1]*r[1] 
 		+ rotMatrix[2][2]*r[2];
+        
+        /*--- Add rotation center and displacements + setting new coords ---*/
     
-    /*--- Store new node location & grid velocity. Add center---*/
-    
-//		geometry->node[iPoint]->SetCoord(0, rotCoord[0] + motion_data->rotcenter[0]+dx);      
-//		geometry->node[iPoint]->SetCoord(1, rotCoord[1] + motion_data->rotcenter[1]+dy);      
-//		geometry->node[iPoint]->SetCoord(2, rotCoord[2] + motion_data->rotcenter[2]+dz); 
-
-		geometry->node[iPoint]->SetCoord(0, rotCoord[0] + 0.4064/2.+dx);      
-		geometry->node[iPoint]->SetCoord(1, rotCoord[1]+dy);      
-		geometry->node[iPoint]->SetCoord(2, rotCoord[2]+dz);      
+		geometry->node[iPoint]->SetCoord(0, rotCoord[0] + rotX + dx);      
+		geometry->node[iPoint]->SetCoord(1, rotCoord[1] + rotY + dy);      
+		geometry->node[iPoint]->SetCoord(2, rotCoord[2] + rotZ + dz);  
+        
 	}
   }
-  else
-  {
-           dpsio   = motion_data_old->angles[0]*3.1415926/180.;  // pitch
-           dyo     = motion_data_old->transvec[2];
+  else  //if it is 2D do the follow
+    {
+    dphio   = motion_data_old->angles[1]*DEG2RAD;  // pitch old
+    dyo     = motion_data_old->transvec[2];
 
-           rotXold = 0.4064/2.;  //motion_data_old->rotcenter[0];
-           rotYold = 0.;                //motion_data_old->rotcenter[1];
+    rotXold = 0.4064/2.;  //motion_data_old->rotcenter[0];
+    rotYold = 0.0;                //motion_data_old->rotcenter[1];
      
-	/* Compute sines/cosines. ---*/
+    /* Compute sines/cosines. ---*/
   
-           cosPsi = cos(dpsi);
-           sinPsi = sin(dpsi);
+    cosPhi = cos(dphi);
+    sinPhi = sin(dphi);
 
-           cosPsio = cos(dpsio);
-           sinPsio = sin(dpsio);
-
-           dxo   = motion_data_old->transvec[0];
-           dyo   = motion_data_old->transvec[2];
+    cosPhio = cos(dphio);
+    sinPhio = sin(dphio);
+           
+    /* Old position*/
+    dxo   = motion_data_old->transvec[0];
+    dyo   = motion_data_old->transvec[2];
 
 	/*--- Loop over and rotate each node in the volume mesh ---*/
-		
-	   if(status_run == 1){
 
-		for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++) {
+    if (status_run == 1) {
 
-/*--- Coordinates of the current point ---*/
-			Coord   = geometry->node[iPoint]->GetCoord(); 
-   
-    /*--- Calculate non-dim. position from rotation center ---*/
-// 			x = (Coord[0]-rotXold-dxo);
-// 			y = (Coord[1]-rotYold-dyo);
-			x = (Coord[0]-0.4064/2.);
-			y = (Coord[1]-dyo);
-  
-    /*--- Compute transformed point coordinates ---*/
-			xno =  cosPsio*x  + sinPsio*y ;
-			yno = -sinPsio*x  + cosPsio*y ;
+      for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++) {
 
-// 			xno = (xno+rotXold-dxo);
-// 			yno = (yno+rotYold-dyo);
+        /*--- Coordinates of the current point ---*/
+        Coord = geometry->node[iPoint]->GetCoord();
 
-			xn =  cosPsi*xno  - sinPsi*yno ;
-			yn = +sinPsi*xno  + cosPsi*yno ;
+        /*--- Translate nodes to original position and old rotation center ---*/
+        x = (Coord[0] - 0.4064 / 2.);
+        y = (Coord[1] - dyo);
 
-    /*--- Store new node location & grid velocity. Add center. 
-     Do not store the grid velocity if this is an adjoint calculation.---*/
-    
-/*			geometry->node[iPoint]->SetCoord(0, xn + motion_data->rotcenter[0]+dx);      
-			geometry->node[iPoint]->SetCoord(1, yn + motion_data->rotcenter[1]+dy); */  
+        /*--- Rotate back to original position ---*/
+        xno = cosPhio * x + sinPhio*y;
+        yno = -sinPhio * x + cosPhio*y;
 
-                        xn = xn +0.4064/2.;   
-                        yn = yn + dz;
+        /*--- Rotate to new position, no need to translate, as all
+         *    points are already at correct rotation point ---*/
+        xn = cosPhi * xno - sinPhi*yno;
+        yn = +sinPhi * xno + cosPhi*yno;
 
- 			geometry->node[iPoint]->SetCoord(0, xn);      
- 			geometry->node[iPoint]->SetCoord(1, yn); 
-		}
-	}
-	else{
-		for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++) {
-/*--- Coordinates of the current point ---*/
-			Coord   = geometry->node[iPoint]->GetCoord(); 
+        /*--- Tranlate points to new position (x-> roration center, y -> plunge displacement ---*/
+        xn = xn + 0.4064 / 2.;
+        yn = yn + dz;
 
-            		xn = Coord[0] - 0.4064/2.; 
-                        yn = Coord[1] - dyo ;
-   
-    /*--- Calculate non-dim. position from rotation center ---*/
+        /*--- Set new coordinates to the system ---*/
+        geometry->node[iPoint]->SetCoord(0, xn);
+        geometry->node[iPoint]->SetCoord(1, yn);
+      }
+    }
+    else {
 
-			xn =  cosPsi*xn  - sinPsi*yn ;
-			yn = +sinPsi*xn  + cosPsi*yn ;
-    
-    /*--- Store new node location & grid velocity. Add center. 
-     Do not store the grid velocity if this is an adjoint calculation.---*/
-    
-// 			geometry->node[iPoint]->SetCoord(0, xn + motion_data->rotcenter[0]);      
-// 			geometry->node[iPoint]->SetCoord(1, yn + motion_data->rotcenter[1]);
+      /*--- If first iteration, there is no need to go back to original position
+       * Just put all points on rotation center, rotate all points and than sum
+       *  the original coordinates and plunge displacement ---*/
 
-            		xn = xn +0.4064/2.; 
-                        yn = yn + dz;  
-            		geometry->node[iPoint]->SetCoord(0, xn);      
- 			geometry->node[iPoint]->SetCoord(1, yn); 
-		}
-	}
-	    
+      for (iPoint = 0; iPoint < geometry->GetnPoint(); iPoint++) {
+        /*--- Coordinates of the current point ---*/
+        Coord = geometry->node[iPoint]->GetCoord();
+        
+        /*--- Put all points at rotation center ---*/
+        xn = Coord[0] - 0.4064 / 2.;
+        yn = Coord[1] ;
+
+        /*--- Rotate points ---*/
+        xn = cosPhi * xn - sinPhi*yn;
+        yn = +sinPhi * xn + cosPhi*yn;
+
+        /*--- Go back to original coordinates and sum plunge.
+         *    in this case dz is sum to yn because the modal solver is the same
+         *    for 2D and 3D cases ---*/
+        xn = xn + 0.4064 / 2.;
+        yn = yn + dz;
+        geometry->node[iPoint]->SetCoord(0, xn);
+        geometry->node[iPoint]->SetCoord(1, yn);
+      }
+    }
   }
 	/*--- After moving all nodes, update geometry class ---*/
   

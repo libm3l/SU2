@@ -5457,9 +5457,9 @@ void CEulerSolver::Pressure_Forces(CGeometry *geometry, CConfig *config) {
           else
             iDim = 2;
 
-          ForceInviscidM[0] += -(Pressure - Pressure_Inf)*Normal[iDim]*0.096153176967948;  /*  Plunge 2D */
+          ForceInviscidM[0] += -(Pressure - Pressure_Inf)*Normal[iDim]*0.106652684354435;  /*  Plunge 3D */
           /* Be sure about the sign of the modal force, otherwise the computation is not correct*/
-          ForceInviscidM[1] += -(Pressure - Pressure_Inf)*Normal[iDim]* 0.464625688784754 * (0.2032 - Coord[0]) ;   /*  Pitch 2D */        
+          ForceInviscidM[1] += -(Pressure - Pressure_Inf)*Normal[iDim]* 0.515360786731372 * (0.2032 - Coord[0]) ;   /*  Pitch 3D */        
 
 /*
  * ==========================  end of BSCW wing test case modification ======================    

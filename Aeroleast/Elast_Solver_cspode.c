@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
 
   lmdouble_t *tmpfloat, *time, sign, *ModalForce, f1, f2, w1, w2, md1, md2, mo1, mo2;
   lmdouble_t A11, A12, A13, A21, A22, A23, mf1_n, mf1_n1, mf1_n2, mf2_n, mf2_n1, mf2_n2;
-  lmdouble_t psi, theta, phi, *delta_t, dt, Ytranslation;
+  lmdouble_t psi, theta, phi, *delta_t, dt, plunge;
   lmdouble_t Q1n3, Q1n2, Q1n1, Q2n3, Q2n2, Q2n1;
 
   // Modal accel, velocity and displacements for mode 1 - Plunge
@@ -84,12 +84,15 @@ int main(int argc, char *argv[]) {
   lmdouble_t A2, b21, b22, b23, b24;
   
   // Newmark method parameters
-  lmdouble_t plunge;
   lmdouble_t gamma;
   lmdouble_t betha;
   
   // Structural parameters
   lmdouble_t mode_1, mode_2;
+  
+  // Temporary forced variables
+  
+  lmdouble_t forced_pitch, forced_plunge;
           
   lmdouble_t a, b, c, d, timef, count;
 
@@ -158,8 +161,8 @@ int main(int argc, char *argv[]) {
         f2 = 5.19961338983582;   // frequency
         w2 = 2*3.1415926*f2;
         
-        mode_1 = 0.096153176967948;                    // Eigenvector for plunge   
-        mode_2 = -0.464625688784754*180.0/3.141592654; // Eigenvector for pitch
+        mode_1 = 0.106652684354435;                    // Eigenvector for plunge from NASTRAN  
+        mode_2 = -0.515360786731372*180.0/3.141592654; // Eigenvector for pitch from NASTRAN
        
         /*
          * Newmark Method constants
@@ -199,8 +202,8 @@ int main(int argc, char *argv[]) {
                 psi    = Q2n1*mode_2;
                 theta  = 0;
                 phi    = 0;
-                Ytranslation = Q1n1*mode_1;
-                printf("Initial pitching angle and plunge is %lf  %lf \n", psi, Ytranslation);
+                plunge = Q1n1*mode_1;
+                printf("Initial pitching angle and plunge is %lf  %lf \n", psi, plunge);
 
 		if( fclose (fp) != 0)
 			Perror("fclose");
@@ -366,7 +369,7 @@ int main(int argc, char *argv[]) {
     q2_dot_np1 = b21 + b22;
     q2_np1     = b23 + b24;
     
-    printf("Rodando Versao CSPODE mod - somente pitch \n");
+    printf("Rodando Versao CSPODE - pitch e plunge 3D \n");
 
     /*
      * shift solution
@@ -383,6 +386,13 @@ int main(int argc, char *argv[]) {
 //        analitic_plunge = exp(-md1 * w1 * (*time))*((0.0 * cos(wd * (*time))+((10.0 * 3.1415926 / 180.0 + md1 * w1 * 0.0) / wd) * sin(wd * (*time))));
 //
 //        fprintf(fp, "%lf %lf %lf %lf %lf %lf  %lf\n", *time, Q2n2 * mode_2, Q1n2, mf1_n, mf2_n, q2_n, analitic_plunge);
+        
+//        forced_pitch  = -5.0*sin(2.0*3.1415926*15.625* *time)/mode_2; 
+//        forced_plunge = 0.05*sin(2.0*3.1415926*15.625* *time)/mode_1;
+//        
+//        q1_np1 = forced_plunge;
+//        q2_np1 = forced_pitch;
+                
         fprintf(fp, "%lf %lf %lf %lf %lf \n", *time, p2_np1, p1_np1, q2_np1* mode_2, q1_np1*mode_1);
 
         fflush(fp);
@@ -407,14 +417,15 @@ int main(int argc, char *argv[]) {
       /*
        * get pitching angle and translation
        */
-      psi = q2_np1 * mode_2;
-      theta = 0.0;
-      phi = 0.0;
-      Ytranslation = q1_np1 * mode_1;
+      // To check mesh deformation in plunge
+      theta = 0.0;            // roll
+      phi = q2_np1 * mode_2;  //pitch
+      psi = 0.0;              //yaw
+      plunge = q1_np1 * mode_1;
     }
 
-     printf("Cl and Cm are %lf  %lf \n", p1_np1/(mode_1*8082.32803*0.4064), p2_np1/(0.464625688784754*8082.32803*0.4064*0.4064));
-     printf("Pitching angle and plunge is %lf  %lf \n", psi, Ytranslation);
+     printf("Cl and Cm are %lf  %lf \n", p1_np1/(mode_1*3632.50698*0.33032192), p2_np1/(0.464625688784754*3632.50698*0.4064*0.33032192));
+     printf("Pitching angle and plunge is %lf  %lf \n", phi, plunge);
 /*
  * send modal coordinates (translation and angles) back to SU2
  * open socket for sending data back
@@ -440,9 +451,9 @@ int main(int argc, char *argv[]) {
 		Error("m3l_Mklist");
 	tmpfloat = (lmdouble_t *)m3l_get_data_pointer(TmpNode);
 
-	tmpfloat[0] = psi;
-	tmpfloat[1] = theta;
-	tmpfloat[2] = phi;
+	tmpfloat[0] = theta;    // roll
+	tmpfloat[1] = phi;      //pitch
+	tmpfloat[2] = psi;      //yaw
 /*
  * add RotCenter
  */	
@@ -450,8 +461,8 @@ int main(int argc, char *argv[]) {
 		Error("m3l_Mklist");
 	tmpfloat = (lmdouble_t *)m3l_get_data_pointer(TmpNode);
 	tmpfloat[0] = 0.2032;
-	tmpfloat[1] = 0.;
-	tmpfloat[2] = 0.;
+	tmpfloat[1] = 0.0;
+	tmpfloat[2] = 0.0;
 /*
  * add translation 
  */	
@@ -460,7 +471,7 @@ int main(int argc, char *argv[]) {
 	tmpfloat = (lmdouble_t *)m3l_get_data_pointer(TmpNode);
 	tmpfloat[0] = 0;
 	tmpfloat[1] = 0;
-	tmpfloat[2] = Ytranslation;
+	tmpfloat[2] = plunge;
 
 	client_sender(Snode, sockfd, PInpPar, (opts_t *)NULL, (opts_t *)NULL);
 
@@ -482,6 +493,5 @@ int main(int argc, char *argv[]) {
 
      return 0; 
 }
-
 
 
