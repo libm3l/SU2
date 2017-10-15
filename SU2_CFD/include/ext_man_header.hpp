@@ -4,8 +4,8 @@
 #ifndef __EXT_MAN_HEADER_H__
 #define __EXT_MAN_HEADER_H__
 
-#include "/home/cspode/Downloads/libm3l/Source/data_util/libm3l.h"
-#include "/home/cspode/Downloads/lsipdx/Source/lsipdx.h"
+#include "//home/jka/Cprograms/Sources/libm3l/Source/data_util/libm3l.h"
+#include "/home/jka/Cprograms/Sources/lsipdx/Source/lsipdx.h"
 
 
 typedef struct d6dof{
