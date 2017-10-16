@@ -23,7 +23,7 @@
 
 
 /*
- *     Function Linear Modal Solver specific ti BSCW wing test case
+ *     Function Linear Modal Solver specific to BSCW wing test case
  *
  *     Date: 2017-07-10
  * 
@@ -40,7 +40,10 @@
  *
  *     Modifications:
  *     Date		Version		Patch number		CLA 
- *
+ *     2017-09-23 Modified by Cleber Spode
+ *     1.Modified from central difference to Newmark Method
+ *     2.Change the pointer dt to deta_t and variable t to dt
+ *    
  *
  *     Description
  * 
@@ -53,34 +56,56 @@
 #include "Elast_Solver.h"
 
 
-int main(int argc, char *argv[])
-{
-	node_t *Gnode=NULL, *Snode=NULL, *FoundNode=NULL, *TmpNode=NULL;
-	size_t i, niter, dim[1];
+int main(int argc, char *argv[]) {
+  node_t *Gnode = NULL, *Snode = NULL, *FoundNode = NULL, *TmpNode = NULL;
+  size_t i, niter, dim[1];
 
-	lmint_t sockfd, portno, restart, *comfreq;
+  lmint_t sockfd, portno, restart, *comfreq;
 
-        socklen_t clilen;
-        struct sockaddr_in cli_addr;
-	lmchar_t *name ="CFD2SIM";
-	lmchar_t *name1="SIM2CFD";
-        lmchar_t *action;
+  socklen_t clilen;
+  struct sockaddr_in cli_addr;
+  lmchar_t *name = "CFD2SIM";
+  lmchar_t *name1 = "SIM2CFD";
+  lmchar_t *action;
 
-	lmdouble_t *tmpfloat, *time, sign, *ModalForce, f1, f2, w1, w2, md1, md2, mo1, mo2;
-        lmdouble_t A11,A12,A13,A21,A22,A23,mf1_n,mf1_n1,mf1_n2,mf2_n,mf2_n1,mf2_n2;
-	lmdouble_t psi,theta,phi,*dt,t,Ytranslation;
-        lmdouble_t Q1n3, Q1n2, Q1n1, Q2n3, Q2n2, Q2n1;
-	lmdouble_t a,b,c,d,timef, count;
-	
-	find_t *SFounds;
-	
-	opts_t opts, *Popts_1;
-	
-	FILE *fp;	
-	
-	client_fce_struct_t InpPar, *PInpPar;
+  lmdouble_t *tmpfloat, *time, sign, *ModalForce, f1, f2, w1, w2, md1, md2, mo1, mo2;
+  lmdouble_t A11, A12, A13, A21, A22, A23, mf1_n, mf1_n1, mf1_n2, mf2_n, mf2_n1, mf2_n2;
+  lmdouble_t psi, theta, phi, *delta_t, dt, plunge;
+  lmdouble_t Q1n3, Q1n2, Q1n1, Q2n3, Q2n2, Q2n1;
 
-	PInpPar = &InpPar;
+  // Modal accel, velocity and displacements for mode 1 - Plunge
+  lmdouble_t q1_ddot_n, q1_ddot_np1, q1_dot_n, q1_dot_np1, q1_n, q1_np1, p1_np1;
+  // Newmark variables for mode 1 - Plunge
+  lmdouble_t A1, b11, b12, b13, b14;
+
+  // Modal accel, velocity and displacements for mode 2 - Pitch
+  lmdouble_t q2_ddot_n, q2_ddot_np1, q2_dot_n, q2_dot_np1, q2_n, q2_np1, p2_np1;
+  // Newmark variables for mode 2 - Pitch
+  lmdouble_t A2, b21, b22, b23, b24;
+  
+  // Newmark method parameters
+  lmdouble_t gamma;
+  lmdouble_t betha;
+  
+  // Structural parameters
+  lmdouble_t mode_1, mode_2;
+  
+  // Temporary forced variables
+  
+  lmdouble_t forced_pitch, forced_plunge;
+          
+  lmdouble_t a, b, c, d, timef, count;
+
+  find_t *SFounds;
+
+  opts_t opts, *Popts_1;
+
+  FILE *fp;
+
+  client_fce_struct_t InpPar, *PInpPar;
+
+  PInpPar = &InpPar;
+  
 /*
  * get port number
  */
@@ -95,17 +120,60 @@ int main(int argc, char *argv[])
         mf1_n1  = 0;
         mf2_n2  = 0;
         mf2_n1  = 0;
-        Q1n3 = 0;
-        Q1n2 = 0;
+        Q1n3 = 0.0;
+        Q1n2 = 0.0;
         Q2n3 = 0;
         Q2n2 = 0;
+        
+        
+        /*
+         * Initialization
+         */
+        q1_n = 0.0;                      // Generalized coordinate mode 1 - Plunge
+        q1_dot_n = 0.0;                  // Generalized velocity mode 1 - Plunge
+        q1_ddot_n = 0.0;                 // Generalized acceleration mode 1 - Plunge
+        
+        q2_n = 0.0;                      // Generalized coordinate mode 2 - Pitch
+        q2_dot_n = 0.0;                  // Generalized velocity mode 2 - Pitch
+        q2_ddot_n = 0.0;                 // Generalized acceleration mode 2 - Pitch
 
-        printf("Restart [1] or not [0]\n");
-        scanf("%d", &restart);
-        printf("Modal mass\n");
-        scanf("%lf %lf", &mo1, &mo2);
-        printf("Modal damping coefficients\n");
-        scanf("%lf %lf", &md1, &md2);
+        /*
+         * Modal matrices ( mass and damping)
+         */        
+        
+//        printf("Restart [1] or not [0]\n");
+//        scanf("%d", &restart);
+//        printf("Modal mass\n");
+//        scanf("%lf %lf", &mo1, &mo2);
+//        printf("Modal damping coefficients\n");
+//        scanf("%lf %lf", &md1, &md2);
+        
+        //Manual setting of modal matrices
+        restart = 0;
+        mo1 = 1.0;
+        mo2 = 1.0;
+        md1 = 0.0;
+        md2 = 0.0;
+        
+        f1 = 3.32991158567781;  // frequency
+        w1 = 2*3.1415926*f1;
+        
+        f2 = 5.19961338983582;   // frequency
+        w2 = 2*3.1415926*f2;
+        
+        mode_1 = 0.106652684354435;                    // Eigenvector for plunge from NASTRAN  
+        mode_2 = -0.515360786731372*180.0/3.141592654; // Eigenvector for pitch from NASTRAN
+       
+        /*
+         * Newmark Method constants
+         */
+        gamma = 0.5;
+        betha = 1.0/12.0;
+        
+        /*
+         * If restart is true, start reading the COORDS file to get positions
+         * and velocities
+         */
 
         if(restart == 1){
 
@@ -127,16 +195,15 @@ int main(int argc, char *argv[])
 
 			mf1_n = c;
 			mf2_n = d;
-			Q2n1 = a/27.264;
-			Q1n1 = b/0.1066528;
+			Q2n1 = a/mode_2;
+			Q1n1 = b/mode_1;
 		}
 
-                psi    = Q2n1*27.264;
+                psi    = Q2n1*mode_2;
                 theta  = 0;
                 phi    = 0;
-                Ytranslation = Q1n1*0.1066528;
-                printf("Initial pitching angle and plunge is %lf  %lf \n", psi, Ytranslation);
-
+                plunge = Q1n1*mode_1;
+                printf("Initial pitching angle and plunge is %lf  %lf \n", psi, plunge);
 
 		if( fclose (fp) != 0)
 			Perror("fclose");
@@ -174,16 +241,18 @@ int main(int argc, char *argv[])
 
 		if( m3l_get_Found_number(SFounds) != 1)
 			Error("Elast_str:: More then one ModalF data set found");
-/* 
- * pointer to list of found nodes
- */
-		if( (FoundNode = m3l_get_Found_node(SFounds, 0)) == NULL)
-			Error("Elast_str:: Did not find 1st data pointer");
-		
-		if( (ModalForce = (lmdouble_t *)m3l_get_data_pointer(FoundNode)) == NULL)
-			Error("Elast_str:: Did not find ModalF data pointer");
+      
+        /* 
+       * pointer to list of found nodes
+       */
+      if ((FoundNode = m3l_get_Found_node(SFounds, 0)) == NULL)
+        Error("Elast_str:: Did not find 1st data pointer");
 
-                printf("Modal forces are %lf  %lf \n",ModalForce[0], ModalForce[1]);
+      if ((ModalForce = (lmdouble_t *) m3l_get_data_pointer(FoundNode)) == NULL)
+        Error("Elast_str:: Did not find ModalF data pointer");
+
+      printf("Modal forces are %lf  %lf \n", ModalForce[0], ModalForce[1]);
+      
 /* 
  * free memory allocated in m3l_Locate
  */
@@ -207,7 +276,7 @@ int main(int argc, char *argv[])
  */
 	SFounds = m3l_Locate(Gnode, "/CFD_2_STR/DT", "/*/*",  (lmchar_t *)NULL);
 	FoundNode = m3l_get_Found_node(SFounds, 0);
-	dt = (lmdouble_t *)m3l_get_data_pointer(FoundNode);
+	delta_t = (lmdouble_t *)m3l_get_data_pointer(FoundNode);
 	m3l_DestroyFound(&SFounds);
 /*
  * find position in loop
@@ -229,34 +298,12 @@ int main(int argc, char *argv[])
 	if( close(sockfd) == -1)
 		Perror("close");	
 /*
- * of frequency of communication > 0, multplie time step 
+ * If frequency of communication > 0, multiple time step 
  */
-
-        t = *dt;
+        dt = *delta_t;
         if(*comfreq > 0){
-          t = *comfreq*t;
+          dt = *comfreq*dt;
         }
-/*
- * first mode - plunging mode
- */          
-	printf("Time step is %lf \n", t);
-	f1 = 3.33000000000000;  // frequency
-	w1 = 2*3.1415926*f1;
-//	md1 = 1;  //0;                // damping
-
-	A11 = 0.25*w1*w1 + md1*w1/t+1./(t*t);
-	A12 = 0.5 *w1*w1          - 2./(t*t);
-	A13 = 0.25*w1*w1 - md1*w1/t+1./(t*t);
-/*
- * first mode - pitching mode
- */
-	f2 = 5.2000000000000;   // frequency
-	w2 = 2*3.1415926*f2;
-//	md2 = 1;  //0;                // damping
-
-	A21 = 0.25*w2*w2 + md2*w2/t+1./(t*t);
-	A22 = 0.5 *w2*w2          - 2./(t*t);
-	A23 = 0.25*w2*w2 - md2*w2/t+1./(t*t);
 /*
  * modal forces - they were recevied from SU2
  */
@@ -270,51 +317,115 @@ int main(int argc, char *argv[])
        if ( (fp = fopen("COORDS","w")) == NULL)
            Perror("fopen");
        printf(" Nullifying \n");
+       
        mf1_n=0;
        mf2_n=0;
+       
+    }
+    
+/*
+     * Newmark mode 1 - Plunge
+     * cspode - 2017-09-30
+     */
+    p1_np1 = mf1_n;
+
+    //Initialize acceleration if is not restart
+    if (niter == 0 && restart == 0){
+      q1_ddot_n = (p1_np1-2.0*md1*w1*q1_dot_n - w1*w1*q1_n)/mo1;
     }
 
-/*
- * get new modal coordinates
- */
-	Q1n1 = ((mf1_n + 2*mf1_n1 + mf1_n2)/(4*mo1) - A12*Q1n2 - A13*Q1n3)/A11;
-	Q2n1 = ((mf2_n + 2*mf2_n1 + mf2_n2)/(4*mo2) - A22*Q2n2 - A23*Q2n3)/A21;
-/*
- * shift solution
- */
-     if(restart == 1 && niter == 0){
-       printf("Skipping\n");
-     }
-     else{
-       if( strncmp(action, "shift", 5) == 0){
+    printf("q_ddot_n = %f \n", q1_ddot_n);
 
-         fprintf(fp, "%lf %lf %lf %lf %lf\n", *time, Q2n1*27.264, Q1n1*0.1066528,mf1_n,mf2_n);
-         fflush(fp);
+    b11 = q1_dot_n + (1 - gamma) * dt*q1_ddot_n;
+    b13 = q1_n + dt * q1_dot_n + (0.5 - betha) * dt * dt*q1_ddot_n;
+    A1 = mo1 + gamma * dt * 2.0 * md1 * w1 + betha * dt * dt * w1*w1;
+    q1_ddot_np1 = (p1_np1 - 2.0 * md1 * w1 * b11 - w1 * w1 * b13) / A1;
 
-         ++niter;
+    b22 = gamma * dt*q1_ddot_np1;
+    b24 = dt * dt * betha*q1_ddot_np1;
 
-         mf1_n2  = mf1_n1;
-         mf1_n1  = mf1_n;
+    q1_dot_np1 = b11 + b22;
+    q1_np1 = b13 + b24;
+    
+     /*
+     * Newmark mode 2 - Pitch
+     * cspode - 2017-09-30
+     */
+    p2_np1 = mf2_n;
 
-         mf2_n2  = mf2_n1;
-         mf2_n1  = mf2_n;
+    //Initialize acceleration if is not restart
+    if (niter == 0 && restart == 0){
+      q2_ddot_n = (p2_np1-2.0*md2*w2*q2_dot_n - w2*w2*q2_n)/mo2;
+    }
+    
+    b21 = q2_dot_n + (1-gamma)*dt*q2_ddot_n;
+    b23 = q2_n + dt*q2_dot_n + (0.5 - betha)*dt*dt*q2_ddot_n;
+    A2 = mo2 + gamma*dt*2.0*md2*w2 + betha*dt*dt*w2*w2;
+    q2_ddot_np1 = (p2_np1 - 2.0*md2*w2*b21 - w2*w2*b23)/A2;
+    
+    b22 = gamma*dt*q2_ddot_np1;
+    b24 = dt*dt*betha*q2_ddot_np1;
+    
+    q2_dot_np1 = b21 + b22;
+    q2_np1     = b23 + b24;
+    
+    printf("Rodando Versao CSPODE - pitch e plunge 3D \n");
 
-         Q1n3 = Q1n2;
-         Q1n2 = Q1n1;
-         Q2n3 = Q2n2;
-         Q2n2 = Q2n1; 
-       }
-/*
- * get pitching angle and translation
- */
-	psi    = Q2n1*27.264;
-	theta  = 0;
-	phi    = 0;
+    /*
+     * shift solution
+     */
+    if (restart == 1 && niter == 0) {
+      printf("Skipping\n");
+    } else {
+      if (strncmp(action, "shift", 5) == 0) {
 
-        Ytranslation = Q1n1*0.1066528;
-     }
+//        double analitic_plunge, wd;
+//
+//        wd = w1 * pow((1.0 - pow(md1, 2.0)), 0.5);
+//
+//        analitic_plunge = exp(-md1 * w1 * (*time))*((0.0 * cos(wd * (*time))+((10.0 * 3.1415926 / 180.0 + md1 * w1 * 0.0) / wd) * sin(wd * (*time))));
+//
+//        fprintf(fp, "%lf %lf %lf %lf %lf %lf  %lf\n", *time, Q2n2 * mode_2, Q1n2, mf1_n, mf2_n, q2_n, analitic_plunge);
+        
+//        forced_pitch  = -5.0*sin(2.0*3.1415926*15.625* *time)/mode_2; 
+//        forced_plunge = 0.05*sin(2.0*3.1415926*15.625* *time)/mode_1;
+//        
+//        q1_np1 = forced_plunge;
+//        q2_np1 = forced_pitch;
+                
+        fprintf(fp, "%lf %lf %lf %lf %lf \n", *time, p2_np1, p1_np1, q2_np1* mode_2, q1_np1*mode_1);
 
-     printf("Pitching angle and plunge is %lf  %lf \n", psi, Ytranslation);
+        fflush(fp);
+
+        ++niter;
+
+        mf1_n2 = mf1_n1;
+        mf1_n1 = mf1_n;
+
+        mf2_n2 = mf2_n1;
+        mf2_n1 = mf2_n;
+
+        q1_n = q1_np1;
+        q1_dot_n = q1_dot_np1;
+        q1_ddot_n = q1_ddot_np1;
+
+        q2_n = q2_np1;
+        q2_dot_n = q2_dot_np1;
+        q2_ddot_n = q2_ddot_np1;
+
+      }
+      /*
+       * get pitching angle and translation
+       */
+      // To check mesh deformation in plunge
+      theta = 0.0;            // roll
+      phi = q2_np1 * mode_2;  //pitch
+      psi = 0.0;              //yaw
+      plunge = q1_np1 * mode_1;
+    }
+
+     printf("Cl and Cm are %lf  %lf \n", p1_np1/(mode_1*8082.32803*0.33032192), p2_np1/(-0.515360786731372*8082.32803*0.4064*0.33032192));
+     printf("Pitching angle and plunge is %lf  %lf \n", phi, plunge);
 /*
  * send modal coordinates (translation and angles) back to SU2
  * open socket for sending data back
@@ -340,18 +451,18 @@ int main(int argc, char *argv[])
 		Error("m3l_Mklist");
 	tmpfloat = (lmdouble_t *)m3l_get_data_pointer(TmpNode);
 
-	tmpfloat[0] = psi;
-	tmpfloat[1] = theta;
-	tmpfloat[2] = phi;
+	tmpfloat[0] = theta;    // roll
+	tmpfloat[1] = phi;      //pitch
+	tmpfloat[2] = psi;      //yaw
 /*
- * add Angles 
+ * add RotCenter
  */	
 	if(  (TmpNode = m3l_Mklist("RotCenter", "D", 1, dim, &Snode, "/STR_2_CFD", "./", (char *)NULL)) == 0)
 		Error("m3l_Mklist");
 	tmpfloat = (lmdouble_t *)m3l_get_data_pointer(TmpNode);
-	tmpfloat[0] = 0.2023;
-	tmpfloat[1] = 0.;
-	tmpfloat[2] = 0.;
+	tmpfloat[0] = 0.2032;
+	tmpfloat[1] = 0.0;
+	tmpfloat[2] = 0.0;
 /*
  * add translation 
  */	
@@ -360,7 +471,7 @@ int main(int argc, char *argv[])
 	tmpfloat = (lmdouble_t *)m3l_get_data_pointer(TmpNode);
 	tmpfloat[0] = 0;
 	tmpfloat[1] = 0;
-	tmpfloat[2] = Ytranslation;
+	tmpfloat[2] = plunge;
 
 	client_sender(Snode, sockfd, PInpPar, (opts_t *)NULL, (opts_t *)NULL);
 
@@ -382,6 +493,5 @@ int main(int argc, char *argv[])
 
      return 0; 
 }
-
 
 
