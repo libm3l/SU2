@@ -141,19 +141,19 @@ int main(int argc, char *argv[]) {
          * Modal matrices ( mass and damping)
          */        
         
-//        printf("Restart [1] or not [0]\n");
-//        scanf("%d", &restart);
-//        printf("Modal mass\n");
-//        scanf("%lf %lf", &mo1, &mo2);
-//        printf("Modal damping coefficients\n");
-//        scanf("%lf %lf", &md1, &md2);
+        printf("Restart [1] or not [0]\n");
+        scanf("%d", &restart);
+        printf("Modal mass\n");
+        scanf("%lf %lf", &mo1, &mo2);
+        printf("Modal damping coefficients\n");
+        scanf("%lf %lf", &md1, &md2);
         
         //Manual setting of modal matrices
-        restart = 0;
-        mo1 = 1.0;
-        mo2 = 1.0;
-        md1 = 0.0;
-        md2 = 0.0;
+//        restart = 0;
+//        mo1 = 1.0;
+//        mo2 = 1.0;
+//        md1 = 0.0;
+//        md2 = 0.0;
         
         f1 = 3.32991158567781;  // frequency
         w1 = 2*3.1415926*f1;
