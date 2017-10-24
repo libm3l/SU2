@@ -1,6 +1,6 @@
 
-PATHLSIPDX = /home/cspode/Downloads/lsipdx/Source
-PATHLM3L   = /home/cspode/Downloads/libm3l/Source/data_util/
+PATHLSIPDX = /home/jiraseka/Cprograms/Sources/lsipdx/Source/
+PATHLM3L   = /home/jiraseka/Cprograms/Sources/libm3l/Source/data_util/
 
 all:
 	sed 's|PATHLS|$(PATHLSIPDX)|' Elast_Solver._h > Elast_Solver.h
