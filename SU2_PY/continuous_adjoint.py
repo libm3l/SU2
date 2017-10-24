@@ -52,16 +52,20 @@ def main():
                       help="COMPUTE direct and adjoint problem", metavar="COMPUTE")
     parser.add_option("-s", "--step",       dest="step",       default=1E-4,
                       help="DOT finite difference STEP", metavar="STEP")    
+    parser.add_option("-z", "--zones", dest="nzones", default="1",
+                      help="Number of Zones", metavar="ZONES")
     
     (options, args)=parser.parse_args()
     options.partitions  = int( options.partitions )
     options.step        = float( options.step )
     options.compute     = options.compute.upper() == 'TRUE'
+    options.nzones      = int( options.nzones )
     
     continuous_adjoint( options.filename    ,
                         options.partitions  ,
                         options.compute     ,
-                        options.step         )
+                        options.step        , 
+                        options.nzones       )
         
 #: def main()
 
@@ -73,12 +77,14 @@ def main():
 def continuous_adjoint( filename           , 
                         partitions  = 0    , 
                         compute     = True ,
-                        step        = 1e-4  ):
+                        step        = 1e-4 ,
+                        nzones      = 1     ):
     
     # Config
     config = SU2.io.Config(filename)
     config.NUMBER_PART = partitions
-    
+    config.NZONES      = int( nzones )
+
     # State
     state = SU2.io.State()
     
@@ -100,12 +106,6 @@ def continuous_adjoint( filename           ,
 
     # Adjoint Solution
 
-    # If using chain rule update coefficients using gradients as defined in downstream_function (local file)
-    if 'OUTFLOW_GENERALIZED' in config.OBJECTIVE_FUNCTION:
-        import downstream_function # Must be defined in run folder
-        chaingrad = downstream_function.downstream_gradient(config,state,step)
-        # Set coefficients for gradients
-        config.OBJ_CHAIN_RULE_COEFF = str(chaingrad[0:5])
     # Run all-at-once 
     if compute:
         info = SU2.run.adjoint(config)

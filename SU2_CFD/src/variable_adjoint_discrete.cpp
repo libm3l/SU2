@@ -30,6 +30,7 @@
  * You should have received a copy of the GNU Lesser General Public
  * License along with SU2. If not, see <http://www.gnu.org/licenses/>.
  */
+
 #include "../include/variable_structure.hpp"
 
 CDiscAdjVariable::CDiscAdjVariable() : CVariable() {

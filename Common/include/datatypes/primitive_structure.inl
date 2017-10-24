@@ -31,6 +31,7 @@
  * License along with SU2. If not, see <http://www.gnu.org/licenses/>.
  */
 #pragma once
+
 namespace SU2_TYPE{
   inline void SetValue(double& data, const double &val) {data = val;}
 

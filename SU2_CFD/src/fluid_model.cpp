@@ -33,7 +33,6 @@
 
 #include "../include/fluid_model.hpp"
 
-
 CFluidModel::CFluidModel(void) {
 
   /*--- Attributes initialization ---*/

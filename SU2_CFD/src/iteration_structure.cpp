@@ -32,6 +32,19 @@
  */
 
 #include "../include/iteration_structure.hpp"
+#include "../include/solver_structure.hpp"
+
+#include "../include/ext_man_header.hpp"
+
+
+int communicate(CConfig *, CSolver ****, d6dof_t *, int, conn_t *);
+int communicateBSCW(CConfig *, CSolver ****, d6dof_t *, int, conn_t *, char*, long );
+
+
+//void External_Comm(CGeometry ***,CSurfaceMovement **,CVolumetricMovement **,CFreeFormDefBox ***,
+//                      		  CSolver ****, CConfig **,unsigned short , unsigned long ,
+//				  unsigned long );
+
 
 CIteration::CIteration(CConfig *config) { }
 CIteration::~CIteration(void) { }
@@ -46,19 +59,30 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
           unsigned long IntIter,
           unsigned long ExtIter)   {
 
-  unsigned short iDim, iMGlevel, nMGlevels = config_container[val_iZone]->GetnMGLevels();
+  unsigned short iDim;
   unsigned short Kind_Grid_Movement = config_container[val_iZone]->GetKind_GridMovement(val_iZone);
   unsigned long nIterMesh;
   unsigned long iPoint;
+  long COMMITER;
+
+  d6dof_t d6dofdata, d6dofdata_old, *p_6DOFdata, *p_6DOFdata_old;
+  conn_t conn, *pconn;
+  struct timespec now, tmstart;
+  double seconds;
+
   bool stat_mesh = true;
   bool adjoint = config_container[val_iZone]->GetContinuous_Adjoint();
   bool harmonic_balance = (config_container[val_iZone]->GetUnsteady_Simulation() == HARMONIC_BALANCE);
+
+  p_6DOFdata = &d6dofdata;
+  p_6DOFdata_old = &d6dofdata_old;
+  pconn = &conn;
 
   /*--- For a harmonic balance case, set "iteration number" to the zone number,
    so that the meshes are positioned correctly for each instance. ---*/
   if (harmonic_balance) {
     ExtIter = val_iZone;
-    Kind_Grid_Movement = config_container[val_iZone]->GetKind_GridMovement(ZONE_0);
+    
   }
 
   int rank = MASTER_NODE;
@@ -69,72 +93,7 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
   /*--- Perform mesh movement depending on specified type ---*/
   switch (Kind_Grid_Movement) {
 
-    case MOVING_WALL:
-
-      /*--- Fixed wall velocities: set the grid velocities only one time
-       before the first iteration flow solver. ---*/
-
-      if (ExtIter == 0) {
-
-        if (rank == MASTER_NODE)
-          cout << endl << " Setting the moving wall velocities." << endl;
-
-        surface_movement[val_iZone]->Moving_Walls(geometry_container[val_iZone][MESH_0],
-                                       config_container[val_iZone], val_iZone, ExtIter);
-
-        /*--- Update the grid velocities on the coarser multigrid levels after
-         setting the moving wall velocities for the finest mesh. ---*/
-
-        grid_movement[val_iZone]->UpdateMultiGrid(geometry_container[val_iZone], config_container[val_iZone]);
-
-      }
-
-      break;
-
-
-    case ROTATING_FRAME:
-
-      /*--- Steadily rotating frame: set the grid velocities just once
-       before the first iteration flow solver. ---*/
-
-      if (ExtIter == 0) {
-
-        if (rank == MASTER_NODE) {
-          cout << endl << " Setting rotating frame grid velocities";
-          cout << " for zone " << val_iZone << "." << endl;
-        }
-
-        /*--- Set the grid velocities on all multigrid levels for a steadily
-         rotating reference frame. ---*/
-
-        for (iMGlevel = 0; iMGlevel <= nMGlevels; iMGlevel++)
-          geometry_container[val_iZone][iMGlevel]->SetRotationalVelocity(config_container[val_iZone], val_iZone);
-
-      }
-
-      break;
-
-    case STEADY_TRANSLATION:
-
-      /*--- Set the translational velocity and hold the grid fixed during
-       the calculation (similar to rotating frame, but there is no extra
-       source term for translation). ---*/
-
-      if (ExtIter == 0) {
-
-        if (rank == MASTER_NODE)
-          cout << endl << " Setting translational grid velocities." << endl;
-
-        /*--- Set the translational velocity on all grid levels. ---*/
-
-        for (iMGlevel = 0; iMGlevel <= nMGlevels; iMGlevel++)
-          geometry_container[val_iZone][iMGlevel]->SetTranslationalVelocity(config_container[val_iZone]);
-
-      }
-
-      break;
-
-    case RIGID_MOTION:
+  case RIGID_MOTION:
 
       if (rank == MASTER_NODE) {
         cout << endl << " Performing rigid mesh transformation." << endl;
@@ -233,7 +192,142 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
 
       break;
 
-    case EXTERNAL: case EXTERNAL_ROTATION:
+    case EXTERNAL: 
+
+     COMMITER = config_container[val_iZone]->GetComm_Freq();
+//     if (COMMITER != 0 &&  config_container[val_iZone]->GetExtIter() % COMMITER != 0 )break;
+  /*
+  * motion prescribed by external solver, get the previous iteration 
+  * rotational angles, displacement and rotation center
+  * before getting new values, save old ones
+  */
+      p_6DOFdata_old->angles[0] = config_container[val_iZone]->GetRoll(val_iZone);
+      p_6DOFdata_old->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
+      p_6DOFdata_old->angles[2] = config_container[val_iZone]->GetYaw(val_iZone);
+
+      p_6DOFdata_old->transvec[0] = config_container[val_iZone]->GetTranslation_X(val_iZone);
+      p_6DOFdata_old->transvec[1] = config_container[val_iZone]->GetTranslation_Y(val_iZone);
+      p_6DOFdata_old->transvec[2] = config_container[val_iZone]->GetTranslation_Z(val_iZone);
+      
+      p_6DOFdata_old->rotcenter[0] = config_container[val_iZone]->GetMotion_Origin_X(val_iZone);
+      p_6DOFdata_old->rotcenter[1] = config_container[val_iZone]->GetMotion_Origin_Y(val_iZone);
+      p_6DOFdata_old->rotcenter[2] = config_container[val_iZone]->GetMotion_Origin_Z(val_iZone);
+
+
+     if ( (COMMITER != 0 &&  config_container[val_iZone]->GetExtIter() % COMMITER == 0) || COMMITER == 0 ){
+       
+      if (rank == MASTER_NODE){
+ /*
+  * MASTER node communicate with external solver
+  */
+//         cout << endl << " Sending data to external process." << endl;
+         clock_gettime(CLOCK_REALTIME, &tmstart);
+
+//          if( communicate(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn) != 0)
+/*
+ * ==========================  BSCW wing test case modification ======================
+ */
+
+     if( communicateBSCW(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn, "shift", COMMITER) != 0)
+         Error("Communicate()");
+/*
+ * ==========================  end of BSCW wing test case modification ======================
+ */      
+	  clock_gettime(CLOCK_REALTIME, &now);
+	  seconds = (double)((now.tv_sec+now.tv_nsec*1e-9) - (double)(tmstart.tv_sec+tmstart.tv_nsec*1e-9));
+
+//	  cout << endl << " Data from external process received, communication time: " << seconds << " seconds" << endl;
+      }}
+      else
+      {
+
+      p_6DOFdata->angles[0] = config_container[val_iZone]->GetRoll(val_iZone);
+      p_6DOFdata->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
+      p_6DOFdata->angles[2] = config_container[val_iZone]->GetYaw(val_iZone);
+
+      p_6DOFdata->transvec[0] = config_container[val_iZone]->GetTranslation_X(val_iZone);
+      p_6DOFdata->transvec[1] = config_container[val_iZone]->GetTranslation_Y(val_iZone);
+      p_6DOFdata->transvec[2] = config_container[val_iZone]->GetTranslation_Z(val_iZone);
+      
+      p_6DOFdata->rotcenter[0] = config_container[val_iZone]->GetMotion_Origin_X(val_iZone);
+      p_6DOFdata->rotcenter[1] = config_container[val_iZone]->GetMotion_Origin_Y(val_iZone);
+      p_6DOFdata->rotcenter[2] = config_container[val_iZone]->GetMotion_Origin_Z(val_iZone);
+
+       }
+/*
+ *recevied angles have to redistrbuted to all partitions
+ */   
+#ifdef HAVE_MPI
+      SU2_MPI::Bcast(p_6DOFdata->angles, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
+      SU2_MPI::Bcast(p_6DOFdata->rotcenter, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
+      SU2_MPI::Bcast(p_6DOFdata->transvec, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
+#endif
+         
+/*
+ * Save motion data, they are needed to transform the mesh back to its original position
+ * during next step transformation
+ */
+      if (COMMITER == 0 && ExtIter == config_container[val_iZone]->GetUnst_RestartIter()){
+/*
+ * if static aeorelast and initial iteration set all variables to 0
+ */
+        p_6DOFdata->rotcenter[0] = 0.2032;
+        p_6DOFdata->rotcenter[1] = 0;
+        p_6DOFdata->rotcenter[2] = 0;
+
+        p_6DOFdata->angles[0] = 0;
+        p_6DOFdata->angles[1] = 0;
+        p_6DOFdata->angles[2] = 0;
+
+        p_6DOFdata->transvec[0] = 0;
+        p_6DOFdata->transvec[1] = 0;
+        p_6DOFdata->transvec[2] = 0;
+      }
+      config_container[val_iZone]->SetMotion_Origin_X(val_iZone,p_6DOFdata->rotcenter[0]);
+      config_container[val_iZone]->SetMotion_Origin_Y(val_iZone,p_6DOFdata->rotcenter[1]);
+      config_container[val_iZone]->SetMotion_Origin_Z(val_iZone,p_6DOFdata->rotcenter[2]);
+      
+      config_container[val_iZone]->SetRoll(val_iZone,p_6DOFdata->angles[0]);
+      config_container[val_iZone]->SetPitch(val_iZone,p_6DOFdata->angles[1]);
+      config_container[val_iZone]->SetYaw(val_iZone,p_6DOFdata->angles[2]);
+
+      config_container[val_iZone]->SetTranslation_X(val_iZone,p_6DOFdata->transvec[0]);
+      config_container[val_iZone]->SetTranslation_Y(val_iZone,p_6DOFdata->transvec[1]);
+      config_container[val_iZone]->SetTranslation_Z(val_iZone,p_6DOFdata->transvec[2]);
+
+      if (ExtIter == 0) {
+        /*
+         * if the very first iteration, do not transform mesh back, it is in original position
+         */
+        grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
+                config_container[val_iZone], val_iZone, ExtIter, p_6DOFdata, p_6DOFdata_old, 0);
+      } else {
+        grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
+                config_container[val_iZone], val_iZone, ExtIter, p_6DOFdata, p_6DOFdata_old, 1);
+      }
+      
+     if (COMMITER == 0) {
+        /* 
+         * if communicating every step, calculate grid velocity
+         */
+        geometry_container[val_iZone][MESH_0]->SetGridVelocity(config_container[val_iZone], ExtIter);
+      } else {
+        /* 
+         * .. otherwise consider as steady aeroelasticity and nullify all grid velocities
+         */
+        geometry_container[val_iZone][MESH_0]->SetGridVelocity(config_container[val_iZone], 0);
+      }
+      
+      /*--- Update the multigrid structure after moving the finest grid,
+       including computing the grid velocities on the coarser levels. ---*/
+      
+      grid_movement[val_iZone]->UpdateMultiGrid(geometry_container[val_iZone], config_container[val_iZone]);
+      
+
+    break;
+
+
+    case EXTERNAL_ROTATION:
 
       /*--- Apply rigid rotation to entire grid first, if necessary ---*/
 
@@ -390,6 +484,9 @@ void CIteration::SetGrid_Movement(CGeometry ***geometry_container,
       grid_movement[val_iZone]->UpdateMultiGrid(geometry_container[val_iZone], config_container[val_iZone]);
 
       break;
+	/*--- Already initialized in the static mesh movement routine at driver level. ---*/ 
+    case STEADY_TRANSLATION: case MOVING_WALL: case ROTATING_FRAME:
+      break;
 
     case NO_MOVEMENT: case GUST: default:
 
@@ -434,14 +531,17 @@ void CIteration::Update(COutput *output,
                         unsigned short val_iZone)      { }
 void CIteration::Monitor()     { }
 void CIteration::Output()      { }
-void CIteration::Postprocess() { }
+void CIteration::Postprocess(CConfig **config_container,
+                             CGeometry ***geometry_container,
+                             CSolver ****solver_container,
+                             unsigned short val_iZone) { }
 
 
 
-CMeanFlowIteration::CMeanFlowIteration(CConfig *config) : CIteration(config) { }
-CMeanFlowIteration::~CMeanFlowIteration(void) { }
+CFluidIteration::CFluidIteration(CConfig *config) : CIteration(config) { }
+CFluidIteration::~CFluidIteration(void) { }
 
-void CMeanFlowIteration::Preprocess(COutput *output,
+void CFluidIteration::Preprocess(COutput *output,
                                     CIntegration ***integration_container,
                                     CGeometry ***geometry_container,
                                     CSolver ****solver_container,
@@ -461,29 +561,18 @@ void CMeanFlowIteration::Preprocess(COutput *output,
   
   /*--- Set the initial condition for FSI problems with subiterations ---*/
   /*--- This must be done only in the first subiteration ---*/
-  if( fsi  && ( FSIIter == 0 ) )
-   solver_container[val_iZone][MESH_0][FLOW_SOL]->SetInitialCondition(geometry_container[val_iZone], solver_container[val_iZone], config_container[val_iZone], ExtIter);
-
+  if( fsi  && ( FSIIter == 0 ) ){
+    solver_container[val_iZone][MESH_0][FLOW_SOL]->SetInitialCondition(geometry_container[val_iZone], solver_container[val_iZone], config_container[val_iZone], ExtIter);
+  }
   
   /*--- Apply a Wind Gust ---*/
   
   if (config_container[val_iZone]->GetWind_Gust()) {
     SetWind_GustField(config_container[val_iZone], geometry_container[val_iZone], solver_container[val_iZone]);
   }
-  
-  
-  /*--- Calculate and set Mixing Plane averaged quantities at interfaces ---*/
-  
-  if(config_container[val_iZone]->GetBoolMixingPlane())
-    SetMixingPlane(geometry_container, solver_container, config_container, val_iZone);
-  
-  /*--- Compute turboperformance ---*/
-  
-  if(config_container[val_iZone]->GetBoolTurboPerf())
-    SetTurboPerformance(geometry_container, solver_container, config_container, output, val_iZone);
 }
 
-void CMeanFlowIteration::Iterate(COutput *output,
+void CFluidIteration::Iterate(COutput *output,
                                  CIntegration ***integration_container,
                                  CGeometry ***geometry_container,
                                  CSolver ****solver_container,
@@ -493,11 +582,24 @@ void CMeanFlowIteration::Iterate(COutput *output,
                                  CVolumetricMovement **grid_movement,
                                  CFreeFormDefBox*** FFDBox,
                                  unsigned short val_iZone) {
-  
   unsigned long IntIter, ExtIter;
   
-  bool unsteady = (config_container[val_iZone]->GetUnsteady_Simulation() == DT_STEPPING_1ST) || (config_container[val_iZone]->GetUnsteady_Simulation() == DT_STEPPING_2ND);
+  d6dof_t d6dofdata, d6dofdata_old, *p_6DOFdata, *p_6DOFdata_old;
+  conn_t conn, *pconn;
+  struct timespec now, tmstart;
+  double seconds;
+  p_6DOFdata = &d6dofdata;
+  p_6DOFdata_old = &d6dofdata_old;
+  pconn = &conn;
   
+    int rank = MASTER_NODE;
+#ifdef HAVE_MPI
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif
+  
+  bool unsteady = (config_container[val_iZone]->GetUnsteady_Simulation() == DT_STEPPING_1ST) || (config_container[val_iZone]->GetUnsteady_Simulation() == DT_STEPPING_2ND);
+  bool frozen_visc = (config_container[val_iZone]->GetContinuous_Adjoint() && config_container[val_iZone]->GetFrozen_Visc_Cont()) ||
+                     (config_container[val_iZone]->GetDiscrete_Adjoint() && config_container[val_iZone]->GetFrozen_Visc_Disc());
   ExtIter = config_container[val_iZone]->GetExtIter();
   
   /* --- Setting up iteration values depending on if this is a
@@ -505,7 +607,7 @@ void CMeanFlowIteration::Iterate(COutput *output,
   
   if ( !unsteady ) IntIter = ExtIter;
   else IntIter = config_container[val_iZone]->GetIntIter();
-  
+	
   /*--- Update global parameters ---*/
   
   switch( config_container[val_iZone]->GetKind_Solver() ) {
@@ -526,9 +628,8 @@ void CMeanFlowIteration::Iterate(COutput *output,
   integration_container[val_iZone][FLOW_SOL]->MultiGrid_Iteration(geometry_container, solver_container, numerics_container,
                                                                   config_container, RUNTIME_FLOW_SYS, IntIter, val_iZone);
   
-  
   if ((config_container[val_iZone]->GetKind_Solver() == RANS) ||
-      (config_container[val_iZone]->GetKind_Solver() == DISC_ADJ_RANS)) {
+      ((config_container[val_iZone]->GetKind_Solver() == DISC_ADJ_RANS) && !frozen_visc)) {
     
     /*--- Solve the turbulence model ---*/
     
@@ -545,32 +646,127 @@ void CMeanFlowIteration::Iterate(COutput *output,
     }
     
   }
+
+/*
+ * ==========================  BSCW wing test case modification ======================
+ *
+ * AJNOTE: Adam Jirasek: if any strong coupling to be done
+ *                     make a call here, at this position the 
+ *                     communication will be called every subiteration
+ */
+ /*
+  * motion prescribed by external solver, get the previous iteration 
+  * rotational angles, displacement and rotation center
+  */
+      if ( config_container[val_iZone]->GetComm_Freq() == 0  ){
+      if( config_container[val_iZone]->GetKind_GridMovement(ZONE_0) == EXTERNAL){
+      
+      p_6DOFdata_old->angles[0] = config_container[val_iZone]->GetYaw(val_iZone);
+      p_6DOFdata_old->angles[1] = config_container[val_iZone]->GetPitch(val_iZone);
+      p_6DOFdata_old->angles[2] = config_container[val_iZone]->GetRoll(val_iZone);
+
+      p_6DOFdata_old->transvec[0] = config_container[val_iZone]->GetTranslation_X(val_iZone);
+      p_6DOFdata_old->transvec[1] = config_container[val_iZone]->GetTranslation_Y(val_iZone);
+      p_6DOFdata_old->transvec[2] = config_container[val_iZone]->GetTranslation_Z(val_iZone);
+      
+      p_6DOFdata_old->rotcenter[0] = config_container[val_iZone]->GetMotion_Origin_X(val_iZone);
+      p_6DOFdata_old->rotcenter[1] = config_container[val_iZone]->GetMotion_Origin_Y(val_iZone);
+      p_6DOFdata_old->rotcenter[2] = config_container[val_iZone]->GetMotion_Origin_Z(val_iZone);
+
+      if (rank == MASTER_NODE){
+ /*
+  * MASTER node communicate with external solver
+  */
+//         cout << endl << " Sending data to external process." << endl;
+         clock_gettime(CLOCK_REALTIME, &tmstart);
+
+//          if( communicate(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn) != 0)
+          if( communicateBSCW(config_container[val_iZone],solver_container, p_6DOFdata, ExtIter, pconn, "None", 0) != 0)
+
+              Error("Communicate()");  
+      
+	  clock_gettime(CLOCK_REALTIME, &now);
+	  seconds = (double)((now.tv_sec+now.tv_nsec*1e-9) - (double)(tmstart.tv_sec+tmstart.tv_nsec*1e-9));
+
+//	  cout << endl << " Data from external process received, communication time: " << seconds << " seconds" << endl;
+      }
+/*
+ *recevied angles have to redistrbuted to all partitions
+ */   
+#ifdef HAVE_MPI
+      SU2_MPI::Bcast(p_6DOFdata->angles, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
+      SU2_MPI::Bcast(p_6DOFdata->rotcenter, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
+      SU2_MPI::Bcast(p_6DOFdata->transvec, 3, MPI_DOUBLE, MASTER_NODE,MPI_COMM_WORLD);
+#endif
+
+/*
+ * Save motion data, they are needed to transform the mesh back to its original position
+ * during next step transformation
+ */
+      config_container[val_iZone]->SetMotion_Origin_X(val_iZone,p_6DOFdata->rotcenter[0]);
+      config_container[val_iZone]->SetMotion_Origin_Y(val_iZone,p_6DOFdata->rotcenter[1]);
+      config_container[val_iZone]->SetMotion_Origin_Z(val_iZone,p_6DOFdata->rotcenter[2]);
+      
+      config_container[val_iZone]->SetYaw(val_iZone,p_6DOFdata->angles[0]);
+      config_container[val_iZone]->SetPitch(val_iZone,p_6DOFdata->angles[1]);
+      config_container[val_iZone]->SetRoll(val_iZone,p_6DOFdata->angles[2]);
+
+      config_container[val_iZone]->SetTranslation_X(val_iZone,p_6DOFdata->transvec[0]);
+      config_container[val_iZone]->SetTranslation_Y(val_iZone,p_6DOFdata->transvec[1]);
+      config_container[val_iZone]->SetTranslation_Z(val_iZone,p_6DOFdata->transvec[2]);
+
+            
+      if(ExtIter == 0)
+/*
+ * if the very first iteration, do not transform mesh back, it is in original position
+ */
+         grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
+                                    config_container[val_iZone], val_iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,0);
+       else
+         grid_movement[val_iZone]->D6dof_motion(geometry_container[val_iZone][MESH_0],
+                                    config_container[val_iZone], val_iZone, ExtIter,p_6DOFdata,p_6DOFdata_old,1);
+         
+      geometry_container[val_iZone][MESH_0]->SetGridVelocity(config_container[val_iZone], ExtIter);
+      
+      /*--- Update the multigrid structure after moving the finest grid,
+       including computing the grid velocities on the coarser levels. ---*/
+      
+      grid_movement[val_iZone]->UpdateMultiGrid(geometry_container[val_iZone], config_container[val_iZone]);
+
+   }
+   }   // end if unsteady
   
   /*--- Call Dynamic mesh update if AEROELASTIC motion was specified ---*/
   
-  if ((config_container[val_iZone]->GetGrid_Movement()) && (config_container[val_iZone]->GetAeroelastic_Simulation()) && unsteady) {
-      
-    SetGrid_Movement(geometry_container, surface_movement, grid_movement, FFDBox, solver_container, config_container, val_iZone, IntIter, ExtIter);
-    
-    /*--- Apply a Wind Gust ---*/
-    
-    if (config_container[val_iZone]->GetWind_Gust()) {
-      if (IntIter % config_container[val_iZone]->GetAeroelasticIter() == 0 && IntIter != 0)
-        SetWind_GustField(config_container[val_iZone], geometry_container[val_iZone], solver_container[val_iZone]);
-    }
-    
-  }
-  
-  
+   if ((config_container[val_iZone]->GetGrid_Movement()) && (config_container[val_iZone]->GetAeroelastic_Simulation()) && unsteady) {
+       
+     SetGrid_Movement(geometry_container, surface_movement, grid_movement, FFDBox, solver_container, config_container, val_iZone, IntIter, ExtIter);
+     
+     /*--- Apply a Wind Gust ---*/
+     
+     if (config_container[val_iZone]->GetWind_Gust()) {
+       if (IntIter % config_container[val_iZone]->GetAeroelasticIter() == 0 && IntIter != 0)
+         SetWind_GustField(config_container[val_iZone], geometry_container[val_iZone], solver_container[val_iZone]);
+     }
+     
+   }
+/*
+ * ==========================  end of BSCW wing test case modification ======================
+ */
+
   if ( unsteady && !config_container[val_iZone]->GetDiscrete_Adjoint() )
     
   /*--- Write the convergence history (only screen output) ---*/
+
+  if ( unsteady && !config_container[val_iZone]->GetDiscrete_Adjoint() ) {
     
     output->SetConvHistory_Body(NULL, geometry_container, solver_container, config_container, integration_container, true, 0.0, val_iZone);
+    
+  }
   
 }
 
-void CMeanFlowIteration::Update(COutput *output,
+void CFluidIteration::Update(COutput *output,
                                 CIntegration ***integration_container,
                                 CGeometry ***geometry_container,
                                 CSolver ****solver_container,
@@ -623,11 +819,14 @@ void CMeanFlowIteration::Update(COutput *output,
   
 }
 
-void CMeanFlowIteration::Monitor()     { }
-void CMeanFlowIteration::Output()      { }
-void CMeanFlowIteration::Postprocess() { }
+void CFluidIteration::Monitor()     { }
+void CFluidIteration::Output()      { }
+void CFluidIteration::Postprocess(CConfig **config_container,
+                                  CGeometry ***geometry_container,
+                                  CSolver ****solver_container,
+                                  unsigned short val_iZone) { }
 
-void CMeanFlowIteration::SetWind_GustField(CConfig *config_container, CGeometry **geometry_container, CSolver ***solver_container) {
+void CFluidIteration::SetWind_GustField(CConfig *config_container, CGeometry **geometry_container, CSolver ***solver_container) {
   // The gust is imposed on the flow field via the grid velocities. This method called the Field Velocity Method is described in the
   // NASA TM–2012-217771 - Development, Verification and Use of Gust Modeling in the NASA Computational Fluid Dynamics Code FUN3D
   // the desired gust is prescribed as the negative of the grid velocity.
@@ -828,7 +1027,7 @@ void CMeanFlowIteration::SetWind_GustField(CConfig *config_container, CGeometry 
   
 }
 
-void CMeanFlowIteration::InitializeVortexDistribution(unsigned long &nVortex, vector<su2double>& x0, vector<su2double>& y0, vector<su2double>& vort_strength, vector<su2double>& r_core) {
+void CFluidIteration::InitializeVortexDistribution(unsigned long &nVortex, vector<su2double>& x0, vector<su2double>& y0, vector<su2double>& vort_strength, vector<su2double>& r_core) {
   /*--- Read in Vortex Distribution ---*/
   std::string line;
   std::ifstream file;
@@ -865,54 +1064,38 @@ void CMeanFlowIteration::InitializeVortexDistribution(unsigned long &nVortex, ve
   
 }
 
-void CMeanFlowIteration::SetMixingPlane(CGeometry ***geometry_container, CSolver ****solver_container, CConfig **config_container, unsigned short iZone) {
-  
-  unsigned short jZone;
-  unsigned short nZone = geometry_container[ZONE_0][MESH_0]->GetnZone();
-  int intMarker, extMarker, intMarkerMix;
-  string intMarker_Tag, extMarker_Tag;
-  
-  /*-- Loop on all the boundary to find MIXING_PLANE boundary --*/
-  for (intMarker = 0; intMarker < config_container[iZone]->GetnMarker_All(); intMarker++) {
-    for (intMarkerMix=0; intMarkerMix < config_container[iZone]->Get_nMarkerMixingPlane(); intMarkerMix++)
-      if (config_container[iZone]->GetMarker_All_TagBound(intMarker) == config_container[iZone]->GetMarker_MixingPlane_Bound(intMarkerMix) ) {
-        solver_container[iZone][MESH_0][FLOW_SOL]->Mixing_Process(geometry_container[iZone][MESH_0], solver_container[iZone][MESH_0], config_container[iZone], intMarker);
-        extMarker_Tag = config_container[iZone]->GetMarker_MixingPlane_Donor(intMarkerMix);
-        for (jZone = 0; jZone < nZone; jZone++) {
-          for (extMarker = 0; extMarker < config_container[jZone]->GetnMarker_All(); extMarker++)
-            if (config_container[jZone]->GetMarker_All_TagBound(extMarker) == extMarker_Tag) {
-              solver_container[jZone][MESH_0][FLOW_SOL]->SetExtAveragedValue(solver_container[iZone][MESH_0][FLOW_SOL], intMarker, extMarker);
-            }
-        }
-        
-      }
-    
-  }
-  
+
+CTurboIteration::CTurboIteration(CConfig *config) : CFluidIteration(config) { }
+CTurboIteration::~CTurboIteration(void) { }
+void CTurboIteration::Preprocess(COutput *output,
+                                    CIntegration ***integration_container,
+                                    CGeometry ***geometry_container,
+                                    CSolver ****solver_container,
+                                    CNumerics *****numerics_container,
+                                    CConfig **config_container,
+                                    CSurfaceMovement **surface_movement,
+                                    CVolumetricMovement **grid_movement,
+                                    CFreeFormDefBox*** FFDBox,
+                                    unsigned short val_iZone) {
+
+  /*--- Average quantities at the inflow and outflow boundaries ---*/ 
+  solver_container[val_iZone][MESH_0][FLOW_SOL]->TurboAverageProcess(solver_container[val_iZone][MESH_0], geometry_container[val_iZone][MESH_0],config_container[val_iZone],INFLOW);
+  solver_container[val_iZone][MESH_0][FLOW_SOL]->TurboAverageProcess(solver_container[val_iZone][MESH_0], geometry_container[val_iZone][MESH_0],config_container[val_iZone],OUTFLOW);
+
 }
 
-void CMeanFlowIteration::SetTurboPerformance(CGeometry ***geometry_container, CSolver ****solver_container, CConfig **config_container, COutput *output, unsigned short iZone) {
+void CTurboIteration::Postprocess( CConfig **config_container,
+                                   CGeometry ***geometry_container,
+                                   CSolver ****solver_container,
+                                   unsigned short val_iZone) {
+
+  /*--- Average quantities at the inflow and outflow boundaries ---*/
+  solver_container[val_iZone][MESH_0][FLOW_SOL]->TurboAverageProcess(solver_container[val_iZone][MESH_0], geometry_container[val_iZone][MESH_0],config_container[val_iZone],INFLOW);
+  solver_container[val_iZone][MESH_0][FLOW_SOL]->TurboAverageProcess(solver_container[val_iZone][MESH_0], geometry_container[val_iZone][MESH_0],config_container[val_iZone],OUTFLOW);
   
-  unsigned short  jZone, inMarker, outMarker, inMarkerTP, Kind_TurboPerf;
-  unsigned short nZone = geometry_container[iZone][MESH_0]->GetnZone();
-  string inMarker_Tag, outMarker_Tag;
-  
-  
-  /*-- Loop on all the boundary to find MIXING_PLANE boundary --*/
-  for (inMarker = 0; inMarker < config_container[iZone]->GetnMarker_All(); inMarker++)
-    for (inMarkerTP=0; inMarkerTP < config_container[iZone]->Get_nMarkerTurboPerf(); inMarkerTP++)
-      if (config_container[iZone]->GetMarker_All_TagBound(inMarker) == config_container[iZone]->GetMarker_TurboPerf_BoundIn(inMarkerTP) ) {
-        outMarker_Tag =  config_container[iZone]->GetMarker_TurboPerf_BoundOut(inMarkerTP);
-        Kind_TurboPerf = config_container[iZone]->GetKind_TurboPerf(inMarkerTP);
-        for (jZone = 0; jZone < nZone; jZone++)
-          for (outMarker = 0; outMarker < config_container[jZone]->GetnMarker_All(); outMarker++)
-            if (config_container[jZone]->GetMarker_All_TagBound(outMarker) == outMarker_Tag) {
-              solver_container[iZone][MESH_0][FLOW_SOL]->Mixing_Process(geometry_container[iZone][MESH_0], solver_container[iZone][MESH_0], config_container[iZone], inMarker);
-              solver_container[jZone][MESH_0][FLOW_SOL]->Mixing_Process(geometry_container[jZone][MESH_0], solver_container[jZone][MESH_0], config_container[jZone], outMarker);
-              solver_container[iZone][MESH_0][FLOW_SOL]->TurboPerformance(solver_container[jZone][MESH_0][FLOW_SOL], config_container[iZone], inMarker, outMarker, Kind_TurboPerf, inMarkerTP);
-              solver_container[ZONE_0][MESH_0][FLOW_SOL]->StoreTurboPerformance(solver_container[iZone][MESH_0][FLOW_SOL], inMarkerTP);
-            }
-      }
+  /*--- Gather Inflow and Outflow quantities on the Master Node to compute performance ---*/
+  solver_container[val_iZone][MESH_0][FLOW_SOL]->GatherInOutAverageValues(config_container[val_iZone], geometry_container[val_iZone][MESH_0]);
+
 }
 
 
@@ -999,7 +1182,10 @@ void CWaveIteration::Update(COutput *output,
 
 void CWaveIteration::Monitor()     { }
 void CWaveIteration::Output()      { }
-void CWaveIteration::Postprocess() { }
+void CWaveIteration::Postprocess(CConfig **config_container,
+                                 CGeometry ***geometry_container,
+                                 CSolver ****solver_container,
+                                 unsigned short val_iZone) { }
 
 
 CHeatIteration::CHeatIteration(CConfig *config) : CIteration(config) { }
@@ -1083,7 +1269,10 @@ void CHeatIteration::Update(COutput *output,
 }
 void CHeatIteration::Monitor()     { }
 void CHeatIteration::Output()      { }
-void CHeatIteration::Postprocess() { }
+void CHeatIteration::Postprocess(CConfig **config_container,
+                                 CGeometry ***geometry_container,
+                                 CSolver ****solver_container,
+                                 unsigned short val_iZone) { }
 
 
 CPoissonIteration::CPoissonIteration(CConfig *config) : CIteration(config) { }
@@ -1136,7 +1325,10 @@ void CPoissonIteration::Update(COutput *output,
                                unsigned short val_iZone)      { }
 void CPoissonIteration::Monitor()     { }
 void CPoissonIteration::Output()      { }
-void CPoissonIteration::Postprocess() { }
+void CPoissonIteration::Postprocess(CConfig **config_container,
+                        CGeometry ***geometry_container,
+                        CSolver ****solver_container,
+                        unsigned short val_iZone) { }
 
 
 CFEM_StructuralAnalysis::CFEM_StructuralAnalysis(CConfig *config) : CIteration(config) { }
@@ -1440,12 +1632,15 @@ void CFEM_StructuralAnalysis::Update(COutput *output,
 }
 void CFEM_StructuralAnalysis::Monitor()     { }
 void CFEM_StructuralAnalysis::Output()      { }
-void CFEM_StructuralAnalysis::Postprocess() { }
+void CFEM_StructuralAnalysis::Postprocess(CConfig **config_container,
+                                          CGeometry ***geometry_container,
+                                          CSolver ****solver_container,
+                                          unsigned short val_iZone) { }
 
 
-CAdjMeanFlowIteration::CAdjMeanFlowIteration(CConfig *config) : CIteration(config) { }
-CAdjMeanFlowIteration::~CAdjMeanFlowIteration(void) { }
-void CAdjMeanFlowIteration::Preprocess(COutput *output,
+CAdjFluidIteration::CAdjFluidIteration(CConfig *config) : CIteration(config) { }
+CAdjFluidIteration::~CAdjFluidIteration(void) { }
+void CAdjFluidIteration::Preprocess(COutput *output,
                                        CIntegration ***integration_container,
                                        CGeometry ***geometry_container,
                                        CSolver ****solver_container,
@@ -1461,7 +1656,7 @@ void CAdjMeanFlowIteration::Preprocess(COutput *output,
   bool dynamic_mesh = config_container[ZONE_0]->GetGrid_Movement();
   unsigned long IntIter = 0; config_container[ZONE_0]->SetIntIter(IntIter);
   unsigned long ExtIter = config_container[ZONE_0]->GetExtIter();
-  
+
   int rank = MASTER_NODE;
 #ifdef HAVE_MPI
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -1473,7 +1668,7 @@ void CAdjMeanFlowIteration::Preprocess(COutput *output,
     int Direct_Iter = SU2_TYPE::Int(config_container[val_iZone]->GetUnst_AdjointIter()) - SU2_TYPE::Int(ExtIter) - 1;
     if (rank == MASTER_NODE && val_iZone == ZONE_0 && config_container[val_iZone]->GetUnsteady_Simulation())
       cout << endl << " Loading flow solution from direct iteration " << Direct_Iter << "." << endl;
-    solver_container[val_iZone][MESH_0][FLOW_SOL]->LoadRestart(geometry_container[val_iZone], solver_container[val_iZone], config_container[val_iZone], Direct_Iter);
+    solver_container[val_iZone][MESH_0][FLOW_SOL]->LoadRestart(geometry_container[val_iZone], solver_container[val_iZone], config_container[val_iZone], Direct_Iter, true);
   }
   
   /*--- Continuous adjoint Euler, Navier-Stokes or Reynolds-averaged Navier-Stokes (RANS) equations ---*/
@@ -1559,7 +1754,7 @@ void CAdjMeanFlowIteration::Preprocess(COutput *output,
   }
   
 }
-void CAdjMeanFlowIteration::Iterate(COutput *output,
+void CAdjFluidIteration::Iterate(COutput *output,
                                     CIntegration ***integration_container,
                                     CGeometry ***geometry_container,
                                     CSolver ****solver_container,
@@ -1606,7 +1801,7 @@ void CAdjMeanFlowIteration::Iterate(COutput *output,
   
   /*--- Iteration of the turbulence model adjoint ---*/
   
-  if ((config_container[val_iZone]->GetKind_Solver() == ADJ_RANS) && (!config_container[val_iZone]->GetFrozen_Visc())) {
+  if ((config_container[val_iZone]->GetKind_Solver() == ADJ_RANS) && (!config_container[val_iZone]->GetFrozen_Visc_Cont())) {
     
     /*--- Adjoint turbulence model solution ---*/
     
@@ -1616,35 +1811,8 @@ void CAdjMeanFlowIteration::Iterate(COutput *output,
     
   }
   
-  /*--- Dual time stepping strategy ---*/
-  
-  if ((config_container[val_iZone]->GetUnsteady_Simulation() == DT_STEPPING_1ST) ||
-      (config_container[val_iZone]->GetUnsteady_Simulation() == DT_STEPPING_2ND)) {
-    
-    for (IntIter = 1; IntIter < config_container[val_iZone]->GetUnst_nIntIter(); IntIter++) {
-      
-      /*--- Write the convergence history (only screen output) ---*/
-      
-      output->SetConvHistory_Body(NULL, geometry_container, solver_container, config_container, integration_container, true, 0.0, val_iZone);
-      
-      /*--- Set the value of the internal iteration ---*/
-      
-      config_container[val_iZone]->SetIntIter(IntIter);
-      
-      /*--- All zones must be advanced and coupled with each pseudo timestep ---*/
-      
-      integration_container[val_iZone][ADJFLOW_SOL]->MultiGrid_Iteration(geometry_container, solver_container, numerics_container,
-                                                                         config_container, RUNTIME_ADJFLOW_SYS, IntIter, val_iZone);
-      
-      /*--- Check to see if the convergence criteria has been met ---*/
-      
-      if (integration_container[val_iZone][ADJFLOW_SOL]->GetConvergence()) break;
-    }
-    
-  }
-  
 }
-void CAdjMeanFlowIteration::Update(COutput *output,
+void CAdjFluidIteration::Update(COutput *output,
                                    CIntegration ***integration_container,
                                    CGeometry ***geometry_container,
                                    CSolver ****solver_container,
@@ -1677,20 +1845,22 @@ void CAdjMeanFlowIteration::Update(COutput *output,
   }
 }
 
-void CAdjMeanFlowIteration::Monitor()     { }
-void CAdjMeanFlowIteration::Output()      { }
-void CAdjMeanFlowIteration::Postprocess() { }
+void CAdjFluidIteration::Monitor()     { }
+void CAdjFluidIteration::Output()      { }
+void CAdjFluidIteration::Postprocess(CConfig **config_container,
+                                     CGeometry ***geometry_container,
+                                     CSolver ****solver_container,
+                                     unsigned short val_iZone) { }
 
-CDiscAdjMeanFlowIteration::CDiscAdjMeanFlowIteration(CConfig *config) : CIteration(config), CurrentRecording(NONE) {
+CDiscAdjFluidIteration::CDiscAdjFluidIteration(CConfig *config) : CIteration(config) {
   
-  meanflow_iteration = new CMeanFlowIteration(config);
-  
-  turbulent = config->GetKind_Solver() == DISC_ADJ_RANS;
+  turbulent = ( config->GetKind_Solver() == DISC_ADJ_RANS);
   
 }
 
-CDiscAdjMeanFlowIteration::~CDiscAdjMeanFlowIteration(void) { }
-void CDiscAdjMeanFlowIteration::Preprocess(COutput *output,
+CDiscAdjFluidIteration::~CDiscAdjFluidIteration(void) { }
+
+void CDiscAdjFluidIteration::Preprocess(COutput *output,
                                            CIntegration ***integration_container,
                                            CGeometry ***geometry_container,
                                            CSolver ****solver_container,
@@ -1700,21 +1870,21 @@ void CDiscAdjMeanFlowIteration::Preprocess(COutput *output,
                                            CVolumetricMovement **grid_movement,
                                            CFreeFormDefBox*** FFDBox,
                                            unsigned short val_iZone) {
-  
+
   unsigned long IntIter = 0, iPoint;
   config_container[ZONE_0]->SetIntIter(IntIter);
   unsigned short ExtIter = config_container[val_iZone]->GetExtIter();
-  bool unsteady = config_container[val_iZone]->GetUnsteady_Simulation() != NONE;
   bool dual_time_1st = (config_container[val_iZone]->GetUnsteady_Simulation() == DT_STEPPING_1ST);
   bool dual_time_2nd = (config_container[val_iZone]->GetUnsteady_Simulation() == DT_STEPPING_2ND);
   bool dual_time = (dual_time_1st || dual_time_2nd);
   unsigned short iMesh;
   int Direct_Iter;
 
-  int rank = MASTER_NODE;
 #ifdef HAVE_MPI
+  int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif
+
 
   /*--- For the unsteady adjoint, load direct solutions from restart files. ---*/
 
@@ -1728,54 +1898,122 @@ void CDiscAdjMeanFlowIteration::Preprocess(COutput *output,
       Direct_Iter += 1;
     }
 
-    if (dual_time_2nd) {
+    if (ExtIter == 0){
 
-      /*--- Load solution at timestep n-2 ---*/
+      if (dual_time_2nd) {
 
-      LoadUnsteady_Solution(geometry_container, solver_container,config_container, val_iZone, Direct_Iter-2);
+        /*--- Load solution at timestep n-2 ---*/
 
-      /*--- Push solution back to correct array ---*/
+        LoadUnsteady_Solution(geometry_container, solver_container,config_container, val_iZone, Direct_Iter-2);
+
+        /*--- Push solution back to correct array ---*/
+
+        for (iMesh=0; iMesh<=config_container[val_iZone]->GetnMGLevels();iMesh++) {
+          for(iPoint=0; iPoint<geometry_container[val_iZone][iMesh]->GetnPoint();iPoint++) {
+            solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->Set_Solution_time_n();
+            solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->Set_Solution_time_n1();
+            if (turbulent) {
+              solver_container[val_iZone][iMesh][TURB_SOL]->node[iPoint]->Set_Solution_time_n();
+              solver_container[val_iZone][iMesh][TURB_SOL]->node[iPoint]->Set_Solution_time_n1();
+            }
+          }
+        }
+      }
+      if (dual_time) {
+
+        /*--- Load solution at timestep n-1 ---*/
+
+        LoadUnsteady_Solution(geometry_container, solver_container,config_container, val_iZone, Direct_Iter-1);
+
+        /*--- Push solution back to correct array ---*/
+
+        for (iMesh=0; iMesh<=config_container[val_iZone]->GetnMGLevels();iMesh++) {
+          for(iPoint=0; iPoint<geometry_container[val_iZone][iMesh]->GetnPoint();iPoint++) {
+            solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->Set_Solution_time_n();
+            if (turbulent) {
+              solver_container[val_iZone][iMesh][TURB_SOL]->node[iPoint]->Set_Solution_time_n();
+            }
+          }
+        }
+      }
+
+      /*--- Load solution timestep n ---*/
+
+      LoadUnsteady_Solution(geometry_container, solver_container,config_container, val_iZone, Direct_Iter);
+
+    }
+
+
+    if ((ExtIter > 0) && dual_time){
+
+      /*--- Load solution timestep n - 2 ---*/
+
+      LoadUnsteady_Solution(geometry_container, solver_container,config_container, val_iZone, Direct_Iter - 2);
+
+      /*--- Temporarily store the loaded solution in the Solution_Old array ---*/
 
       for (iMesh=0; iMesh<=config_container[val_iZone]->GetnMGLevels();iMesh++) {
         for(iPoint=0; iPoint<geometry_container[val_iZone][iMesh]->GetnPoint();iPoint++) {
-          solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->Set_Solution_time_n();
-          solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->Set_Solution_time_n1();
+           solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->Set_OldSolution();
+           if (turbulent){
+             solver_container[val_iZone][iMesh][TURB_SOL]->node[iPoint]->Set_OldSolution();
+           }
+        }
+      }
+
+      /*--- Set Solution at timestep n to solution at n-1 ---*/
+
+      for (iMesh=0; iMesh<=config_container[val_iZone]->GetnMGLevels();iMesh++) {
+        for(iPoint=0; iPoint<geometry_container[val_iZone][iMesh]->GetnPoint();iPoint++) {
+          solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->SetSolution(solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->GetSolution_time_n());
           if (turbulent) {
-            solver_container[val_iZone][iMesh][TURB_SOL]->node[iPoint]->Set_Solution_time_n();
-            solver_container[val_iZone][iMesh][TURB_SOL]->node[iPoint]->Set_Solution_time_n1();
+            solver_container[val_iZone][iMesh][TURB_SOL]->node[iPoint]->SetSolution(solver_container[val_iZone][iMesh][TURB_SOL]->node[iPoint]->GetSolution_time_n());
+          }
+        }
+      }
+      if (dual_time_1st){
+      /*--- Set Solution at timestep n-1 to the previously loaded solution ---*/
+        for (iMesh=0; iMesh<=config_container[val_iZone]->GetnMGLevels();iMesh++) {
+          for(iPoint=0; iPoint<geometry_container[val_iZone][iMesh]->GetnPoint();iPoint++) {
+            solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->Set_Solution_time_n(solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->GetSolution_time_n1());
+            if (turbulent) {
+              solver_container[val_iZone][iMesh][TURB_SOL]->node[iPoint]->Set_Solution_time_n(solver_container[val_iZone][iMesh][TURB_SOL]->node[iPoint]->GetSolution_time_n1());
+            }
+          }
+        }
+      }
+      if (dual_time_2nd){
+        /*--- Set Solution at timestep n-1 to solution at n-2 ---*/
+        for (iMesh=0; iMesh<=config_container[val_iZone]->GetnMGLevels();iMesh++) {
+          for(iPoint=0; iPoint<geometry_container[val_iZone][iMesh]->GetnPoint();iPoint++) {
+            solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->Set_Solution_time_n(solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->GetSolution_time_n1());
+            if (turbulent) {
+              solver_container[val_iZone][iMesh][TURB_SOL]->node[iPoint]->Set_Solution_time_n(solver_container[val_iZone][iMesh][TURB_SOL]->node[iPoint]->GetSolution_time_n1());
+            }
+          }
+        }
+        /*--- Set Solution at timestep n-2 to the previously loaded solution ---*/
+        for (iMesh=0; iMesh<=config_container[val_iZone]->GetnMGLevels();iMesh++) {
+          for(iPoint=0; iPoint<geometry_container[val_iZone][iMesh]->GetnPoint();iPoint++) {
+            solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->Set_Solution_time_n1(solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->GetSolution_Old());
+            if (turbulent) {
+              solver_container[val_iZone][iMesh][TURB_SOL]->node[iPoint]->Set_Solution_time_n1(solver_container[val_iZone][iMesh][TURB_SOL]->node[iPoint]->GetSolution_Old());
+            }
           }
         }
       }
     }
-    if (dual_time) {
+  }
 
-      /*--- Load solution at timestep n-1 ---*/
+  /*--- Store flow solution also in the adjoint solver in order to be able to reset it later ---*/
 
-      LoadUnsteady_Solution(geometry_container, solver_container,config_container, val_iZone, Direct_Iter-1);
-
-      /*--- Push solution back to correct array ---*/
-
-      for (iMesh=0; iMesh<=config_container[val_iZone]->GetnMGLevels();iMesh++) {
-        for(iPoint=0; iPoint<geometry_container[val_iZone][iMesh]->GetnPoint();iPoint++) {
-          solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->Set_Solution_time_n();
-          if (turbulent) {
-            solver_container[val_iZone][iMesh][TURB_SOL]->node[iPoint]->Set_Solution_time_n();
-          }
-        }
+  if (ExtIter == 0 || dual_time) {
+    for (iMesh=0; iMesh<=config_container[val_iZone]->GetnMGLevels();iMesh++) {
+      for (iPoint = 0; iPoint < geometry_container[val_iZone][iMesh]->GetnPoint(); iPoint++) {
+        solver_container[val_iZone][iMesh][ADJFLOW_SOL]->node[iPoint]->SetSolution_Direct(solver_container[val_iZone][iMesh][FLOW_SOL]->node[iPoint]->GetSolution());
       }
     }
-
-    /*--- Load solution timestep n ---*/
-
-    LoadUnsteady_Solution(geometry_container, solver_container,config_container, val_iZone, Direct_Iter);
-
-
-    /*--- Store flow solution also in the adjoint solver in order to be able to reset it later ---*/
-
-    for (iPoint = 0; iPoint < geometry_container[val_iZone][MESH_0]->GetnPoint(); iPoint++) {
-      solver_container[val_iZone][MESH_0][ADJFLOW_SOL]->node[iPoint]->SetSolution_Direct(solver_container[val_iZone][MESH_0][FLOW_SOL]->node[iPoint]->GetSolution());
-    }
-    if (turbulent) {
+    if (turbulent && !config_container[val_iZone]->GetFrozen_Visc_Disc()) {
       for (iPoint = 0; iPoint < geometry_container[val_iZone][MESH_0]->GetnPoint(); iPoint++) {
         solver_container[val_iZone][MESH_0][ADJTURB_SOL]->node[iPoint]->SetSolution_Direct(solver_container[val_iZone][MESH_0][TURB_SOL]->node[iPoint]->GetSolution());
       }
@@ -1783,43 +2021,16 @@ void CDiscAdjMeanFlowIteration::Preprocess(COutput *output,
   }
 
   solver_container[val_iZone][MESH_0][ADJFLOW_SOL]->Preprocessing(geometry_container[val_iZone][MESH_0], solver_container[val_iZone][MESH_0],  config_container[val_iZone] , MESH_0, 0, RUNTIME_ADJFLOW_SYS, false);
-  if (turbulent) {
+  if (turbulent && !config_container[val_iZone]->GetFrozen_Visc_Disc()){
     solver_container[val_iZone][MESH_0][ADJTURB_SOL]->Preprocessing(geometry_container[val_iZone][MESH_0], solver_container[val_iZone][MESH_0],  config_container[val_iZone] , MESH_0, 0, RUNTIME_ADJTURB_SYS, false);
   }
 
-  if (CurrentRecording != FLOW_VARIABLES || unsteady) {
-    
-    if (rank == MASTER_NODE && ((ExtIter == 0) || unsteady )) {
-      cout << endl << "-------------------------------------------------------------------------" << endl;
-      cout << "Direct iteration to store computational graph." << endl;
-      cout << "Compute residuals to check the convergence of the direct problem." << endl;
-      cout << "-------------------------------------------------------------------------" << endl << endl;
-    }
-    
-    /*--- Record one mean flow iteration with flow variables as input ---*/
-    
-    SetRecording(output, integration_container, geometry_container, solver_container, numerics_container,
-                 config_container, surface_movement, grid_movement, FFDBox, val_iZone, FLOW_VARIABLES);
-    
-    /*--- Print residuals in the first iteration ---*/
-    
-    if (rank == MASTER_NODE && ((ExtIter == 0) || unsteady )) {
-      cout << "log10[RMS Density]: "<< log10(solver_container[val_iZone][MESH_0][FLOW_SOL]->GetRes_RMS(0))
-           <<", CD: " <<solver_container[val_iZone][MESH_0][FLOW_SOL]->GetTotal_CD()
-          <<", CL: " << solver_container[val_iZone][MESH_0][FLOW_SOL]->GetTotal_CL() << "." << endl;
 
-      if (turbulent) {
-        cout << "log10[RMS k]: " << log10(solver_container[val_iZone][MESH_0][TURB_SOL]->GetRes_RMS(0)) << endl;
-      }
-    }
-    
-  }
-  
 }
 
 
 
-void CDiscAdjMeanFlowIteration::LoadUnsteady_Solution(CGeometry ***geometry_container,
+void CDiscAdjFluidIteration::LoadUnsteady_Solution(CGeometry ***geometry_container,
                                            CSolver ****solver_container,
                                            CConfig **config_container,
                                            unsigned short val_iZone, int val_DirectIter) {
@@ -1833,11 +2044,9 @@ void CDiscAdjMeanFlowIteration::LoadUnsteady_Solution(CGeometry ***geometry_cont
   if (val_DirectIter >= 0) {
     if (rank == MASTER_NODE && val_iZone == ZONE_0)
       cout << " Loading flow solution from direct iteration " << val_DirectIter  << "." << endl;
-    solver_container[val_iZone][MESH_0][FLOW_SOL]->LoadRestart(geometry_container[val_iZone], solver_container[val_iZone], config_container[val_iZone], val_DirectIter);
-    solver_container[val_iZone][MESH_0][FLOW_SOL]->Preprocessing(geometry_container[val_iZone][MESH_0],solver_container[val_iZone][MESH_0], config_container[val_iZone], MESH_0, val_DirectIter, RUNTIME_FLOW_SYS, false);
+    solver_container[val_iZone][MESH_0][FLOW_SOL]->LoadRestart(geometry_container[val_iZone], solver_container[val_iZone], config_container[val_iZone], val_DirectIter, true);
     if (turbulent) {
-      solver_container[val_iZone][MESH_0][TURB_SOL]->LoadRestart(geometry_container[val_iZone], solver_container[val_iZone], config_container[val_iZone], val_DirectIter);
-      solver_container[val_iZone][MESH_0][TURB_SOL]->Postprocessing(geometry_container[val_iZone][MESH_0],solver_container[val_iZone][MESH_0], config_container[val_iZone], MESH_0);
+      solver_container[val_iZone][MESH_0][TURB_SOL]->LoadRestart(geometry_container[val_iZone], solver_container[val_iZone], config_container[val_iZone], val_DirectIter, false);
     }
   } else {
     /*--- If there is no solution file we set the freestream condition ---*/
@@ -1855,7 +2064,7 @@ void CDiscAdjMeanFlowIteration::LoadUnsteady_Solution(CGeometry ***geometry_cont
 }
 
 
-void CDiscAdjMeanFlowIteration::Iterate(COutput *output,
+void CDiscAdjFluidIteration::Iterate(COutput *output,
                                         CIntegration ***integration_container,
                                         CGeometry ***geometry_container,
                                         CSolver ****solver_container,
@@ -1866,290 +2075,134 @@ void CDiscAdjMeanFlowIteration::Iterate(COutput *output,
                                         CFreeFormDefBox*** FFDBox,
                                         unsigned short val_iZone) {
   
-  unsigned long ExtIter = config_container[ZONE_0]->GetExtIter();
-  unsigned long IntIter=0, nIntIter = 1;
-  bool dual_time_1st = (config_container[ZONE_0]->GetUnsteady_Simulation() == DT_STEPPING_1ST);
-  bool dual_time_2nd = (config_container[ZONE_0]->GetUnsteady_Simulation() == DT_STEPPING_2ND);
-  bool dual_time = (dual_time_1st || dual_time_2nd);
+  unsigned long ExtIter = config_container[val_iZone]->GetExtIter();
+  unsigned short Kind_Solver = config_container[val_iZone]->GetKind_Solver();
+  unsigned long IntIter = 0;
+  bool unsteady = config_container[val_iZone]->GetUnsteady_Simulation() != STEADY;
+  bool frozen_visc = config_container[val_iZone]->GetFrozen_Visc_Disc();
 
-  config_container[val_iZone]->SetIntIter(IntIter);
+  if (!unsteady)
+    IntIter = ExtIter;
+  else {
+    IntIter = config_container[val_iZone]->GetIntIter();
+  }
 
-  if(dual_time)
-    nIntIter = config_container[val_iZone]->GetUnst_nIntIter();
+  /*--- Extract the adjoints of the conservative input variables and store them for the next iteration ---*/
 
-  for(IntIter=0; IntIter< nIntIter; IntIter++) {
+  if ((Kind_Solver == DISC_ADJ_NAVIER_STOKES) || (Kind_Solver == DISC_ADJ_RANS) || (Kind_Solver == DISC_ADJ_EULER)) {
 
-    /*--- Set the internal iteration ---*/
+    solver_container[val_iZone][MESH_0][ADJFLOW_SOL]->ExtractAdjoint_Solution(geometry_container[val_iZone][MESH_0], config_container[val_iZone]);
 
-    config_container[val_iZone]->SetIntIter(IntIter);
-
-    /*--- Set the adjoint values of the flow and objective function ---*/
-
-    InitializeAdjoint(solver_container, geometry_container, config_container, val_iZone);
-
-    /*--- Run the adjoint computation ---*/
-
-    AD::ComputeAdjoint();
-
-    /*--- Extract the adjoints of the conservative input variables and store them for the next iteration ---*/
-
-    solver_container[val_iZone][MESH_0][ADJFLOW_SOL]->ExtractAdjoint_Solution(geometry_container[val_iZone][MESH_0],
-                                                                              config_container[val_iZone]);
-
-    solver_container[val_iZone][MESH_0][ADJFLOW_SOL]->ExtractAdjoint_Variables(geometry_container[val_iZone][MESH_0],
-                                                                               config_container[val_iZone]);
-
-    if (config_container[ZONE_0]->GetKind_Solver() == DISC_ADJ_RANS) {
-      solver_container[val_iZone][MESH_0][ADJTURB_SOL]->ExtractAdjoint_Solution(geometry_container[val_iZone][MESH_0],
-                                                                                config_container[val_iZone]);
-    }
-
-    /*--- Clear all adjoints to re-use the stored computational graph in the next iteration ---*/
-
-    AD::ClearAdjoints();
+    solver_container[val_iZone][MESH_0][ADJFLOW_SOL]->ExtractAdjoint_Variables(geometry_container[val_iZone][MESH_0], config_container[val_iZone]);
 
     /*--- Set the convergence criteria (only residual possible) ---*/
 
-    integration_container[val_iZone][ADJFLOW_SOL]->Convergence_Monitoring(geometry_container[val_iZone][MESH_0],config_container[val_iZone],
-                                                                          IntIter,log10(solver_container[val_iZone][MESH_0][ADJFLOW_SOL]->GetRes_RMS(0)), MESH_0);
+    integration_container[val_iZone][ADJFLOW_SOL]->Convergence_Monitoring(geometry_container[val_iZone][MESH_0], config_container[val_iZone],
+                                                                          IntIter, log10(solver_container[val_iZone][MESH_0][ADJFLOW_SOL]->GetRes_RMS(0)), MESH_0);
 
-    if(integration_container[val_iZone][ADJFLOW_SOL]->GetConvergence()) {
-      break;
     }
+  if ((Kind_Solver == DISC_ADJ_RANS) && !frozen_visc) {
 
-    /*--- Write the convergence history (only screen output) ---*/
-
-    if(dual_time && (IntIter != nIntIter-1))
-      output->SetConvHistory_Body(NULL, geometry_container, solver_container, config_container, integration_container, true, 0.0, val_iZone);
-
+    solver_container[val_iZone][MESH_0][ADJTURB_SOL]->ExtractAdjoint_Solution(geometry_container[val_iZone][MESH_0],
+                                                                              config_container[val_iZone]);
   }
 
-  if (dual_time) {
-    integration_container[val_iZone][ADJFLOW_SOL]->SetConvergence(false);
   }
   
-  if (((ExtIter+1 >= config_container[val_iZone]->GetnExtIter()) || (integration_container[val_iZone][ADJFLOW_SOL]->GetConvergence()) ||
-      ((ExtIter % config_container[val_iZone]->GetWrt_Sol_Freq() == 0))) || (dual_time)) {
     
-    /*--- Record one mean flow iteration with geometry variables as input ---*/
-    
-    SetRecording(output, integration_container, geometry_container, solver_container, numerics_container,
-                 config_container, surface_movement, volume_grid_movement, FFDBox, val_iZone, GEOMETRY_VARIABLES);
-    
-    /*--- Set the adjoint values of the flow and objective function ---*/
-    
-    InitializeAdjoint(solver_container, geometry_container, config_container, val_iZone);
-    
-    /*--- Run the adjoint computation ---*/
-    
-    AD::ComputeAdjoint();
-    
-    /*--- Extract the sensitivities (adjoint of node coordinates) ---*/
-    
-    solver_container[val_iZone][MESH_0][ADJFLOW_SOL]->SetSensitivity(geometry_container[val_iZone][MESH_0],config_container[val_iZone]);
-    
-  }
-  
-}
+void CDiscAdjFluidIteration::InitializeAdjoint(CSolver ****solver_container, CGeometry ***geometry_container, CConfig **config_container, unsigned short iZone){
 
-void CDiscAdjMeanFlowIteration::SetRecording(COutput *output,
-                                             CIntegration ***integration_container,
-                                             CGeometry ***geometry_container,
-                                             CSolver ****solver_container,
-                                             CNumerics *****numerics_container,
-                                             CConfig **config_container,
-                                             CSurfaceMovement **surface_movement,
-                                             CVolumetricMovement **grid_movement,
-                                             CFreeFormDefBox*** FFDBox,
-                                             unsigned short val_iZone,
-                                             unsigned short kind_recording)      {
-  
-  unsigned long IntIter = config_container[ZONE_0]->GetIntIter();
-  unsigned long ExtIter = config_container[val_iZone]->GetExtIter(), DirectExtIter;
-  bool unsteady = config_container[val_iZone]->GetUnsteady_Simulation() != NONE;
-  unsigned short iMesh;
+  unsigned short Kind_Solver = config_container[iZone]->GetKind_Solver();
+  bool frozen_visc = config_container[iZone]->GetFrozen_Visc_Disc();
 
-  DirectExtIter = 0;
-  if (unsteady) {
-    DirectExtIter = SU2_TYPE::Int(config_container[val_iZone]->GetUnst_AdjointIter()) - SU2_TYPE::Int(ExtIter) - 1;
+  /*--- Initialize the adjoints the conservative variables ---*/
+
+  if ((Kind_Solver == DISC_ADJ_NAVIER_STOKES) || (Kind_Solver == DISC_ADJ_RANS) || (Kind_Solver == DISC_ADJ_EULER)) {
+
+    solver_container[iZone][MESH_0][ADJFLOW_SOL]->SetAdjoint_Output(geometry_container[iZone][MESH_0],
+                                                                  config_container[iZone]);
   }
 
-  /*--- Reset the tape ---*/
-
-  AD::Reset();
-
-  /*--- We only need to reset the indices if the current recording is different from the recording we want to have ---*/
-
-  if (CurrentRecording != kind_recording && (CurrentRecording != NONE) ) {
-
-    for (iMesh = 0; iMesh <= config_container[val_iZone]->GetnMGLevels(); iMesh++) {
-      solver_container[val_iZone][iMesh][ADJFLOW_SOL]->SetRecording(geometry_container[val_iZone][MESH_0], config_container[val_iZone], kind_recording);
-    }
-
-    if (turbulent) {
-      solver_container[val_iZone][MESH_0][ADJTURB_SOL]->SetRecording(geometry_container[val_iZone][MESH_0], config_container[val_iZone], kind_recording);
-    }
-
-    /*--- Clear indices of coupling variables ---*/
-
-    SetDependencies(solver_container, geometry_container, config_container, val_iZone, ALL_VARIABLES);
-
-    /*--- Run one iteration while tape is passive - this clears all indices ---*/
-
-    meanflow_iteration->Iterate(output,integration_container,geometry_container,solver_container,numerics_container,
-                                config_container,surface_movement,grid_movement,FFDBox,val_iZone);
-
+  if ((Kind_Solver == DISC_ADJ_RANS) && !frozen_visc) {
+    solver_container[iZone][MESH_0][ADJTURB_SOL]->SetAdjoint_Output(geometry_container[iZone][MESH_0],
+        config_container[iZone]);
   }
-
-    /*--- Prepare for recording ---*/
-
-    for (iMesh = 0; iMesh <= config_container[val_iZone]->GetnMGLevels(); iMesh++) {
-      solver_container[val_iZone][iMesh][ADJFLOW_SOL]->SetRecording(geometry_container[val_iZone][MESH_0], config_container[val_iZone], kind_recording);
-    }
-
-    if (turbulent) {
-      solver_container[val_iZone][MESH_0][ADJTURB_SOL]->SetRecording(geometry_container[val_iZone][MESH_0], config_container[val_iZone], kind_recording);
-    }
-
-  /*--- Start the recording of all operations ---*/
-  
-  AD::StartRecording();
-  
-  /*--- Register flow variables ---*/
-  
-  RegisterInput(solver_container, geometry_container, config_container, val_iZone, kind_recording);
-  
-  /*--- Compute coupling or update the geometry ---*/
-
-  SetDependencies(solver_container, geometry_container, config_container, val_iZone, kind_recording);
-  
-  /*--- Set the correct direct iteration number ---*/
-
-  if (unsteady) {
-    config_container[val_iZone]->SetExtIter(DirectExtIter);
-  }
-
-  /*--- Run the direct iteration ---*/
-
-  config_container[val_iZone]->SetIntIter(0);
-  meanflow_iteration->Iterate(output,integration_container,geometry_container,solver_container,numerics_container,
-                              config_container,surface_movement,grid_movement,FFDBox, val_iZone);
-
-  config_container[val_iZone]->SetExtIter(ExtIter);
-
-  /*--- Register flow variables and objective function as output ---*/
-  
-  /*--- For flux-avg or area-avg objective functions the 1D values must be calculated first ---*/
-  for (unsigned short iObj=0; iObj<config_container[val_iZone]->GetnObj(); iObj++) {
-    if (config_container[val_iZone]->GetKind_ObjFunc(iObj)==AVG_OUTLET_PRESSURE ||
-        config_container[val_iZone]->GetKind_ObjFunc(iObj)==AVG_TOTAL_PRESSURE ||
-        config_container[val_iZone]->GetKind_ObjFunc(iObj)==MASS_FLOW_RATE) {
-      output->OneDimensionalOutput(solver_container[val_iZone][MESH_0][FLOW_SOL],
-                                   geometry_container[val_iZone][MESH_0], config_container[val_iZone]);
-      break;
-    }
-  }
-
-  /*--- For a combined objective function, the total should be computed and stored ---*/
-  if (config_container[val_iZone]->GetnObj()>0) {
-    solver_container[val_iZone][MESH_0][FLOW_SOL]->Compute_ComboObj(config_container[val_iZone]);
-  }
-
-  RegisterOutput(solver_container, geometry_container, config_container, val_iZone);
-  
-  /*--- Stop the recording ---*/
-  
-  AD::StopRecording();
-  
-  /*--- Set the recording status ---*/
-  
-  CurrentRecording = kind_recording;
-
-  /*--- Reset the number of the internal iterations---*/
-
-  config_container[ZONE_0]->SetIntIter(IntIter);
-
 }
 
 
-void CDiscAdjMeanFlowIteration::RegisterInput(CSolver ****solver_container, CGeometry ***geometry_container, CConfig **config_container, unsigned short iZone, unsigned short kind_recording) {
-  
-  
-  if (kind_recording == FLOW_VARIABLES) {
+void CDiscAdjFluidIteration::RegisterInput(CSolver ****solver_container, CGeometry ***geometry_container, CConfig **config_container, unsigned short iZone, unsigned short kind_recording){
+
+  unsigned short Kind_Solver = config_container[iZone]->GetKind_Solver();
+  bool frozen_visc = config_container[iZone]->GetFrozen_Visc_Disc();
+
+  if (kind_recording == CONS_VARS || kind_recording == COMBINED){
     
     /*--- Register flow and turbulent variables as input ---*/
     
-    solver_container[iZone][MESH_0][ADJFLOW_SOL]->RegisterSolution(geometry_container[iZone][MESH_0], config_container[iZone]);
+    if ((Kind_Solver == DISC_ADJ_NAVIER_STOKES) || (Kind_Solver == DISC_ADJ_RANS) || (Kind_Solver == DISC_ADJ_EULER)) {
+
+      solver_container[iZone][MESH_0][ADJFLOW_SOL]->RegisterSolution(geometry_container[iZone][MESH_0], config_container[iZone]);
+
+      solver_container[iZone][MESH_0][ADJFLOW_SOL]->RegisterVariables(geometry_container[iZone][MESH_0], config_container[iZone]);
+    }
     
-    solver_container[iZone][MESH_0][ADJFLOW_SOL]->RegisterVariables(geometry_container[iZone][MESH_0], config_container[iZone]);
-    
-    if (turbulent) {
+    if ((Kind_Solver == DISC_ADJ_RANS) && !frozen_visc) {
       solver_container[iZone][MESH_0][ADJTURB_SOL]->RegisterSolution(geometry_container[iZone][MESH_0], config_container[iZone]);
     }
   }
-  if (kind_recording == GEOMETRY_VARIABLES) {
-    
+  if (kind_recording == MESH_COORDS){
+
     /*--- Register node coordinates as input ---*/
-    
+
     geometry_container[iZone][MESH_0]->RegisterCoordinates(config_container[iZone]);
-    
+
   }
 
 }
 
-void CDiscAdjMeanFlowIteration::SetDependencies(CSolver ****solver_container, CGeometry ***geometry_container, CConfig **config_container, unsigned short iZone, unsigned short kind_recording) {
+void CDiscAdjFluidIteration::SetDependencies(CSolver ****solver_container, CGeometry ***geometry_container, CConfig **config_container, unsigned short iZone, unsigned short kind_recording){
 
-  if ((kind_recording == GEOMETRY_VARIABLES) || (kind_recording == ALL_VARIABLES)) {
+  unsigned short Kind_Solver = config_container[iZone]->GetKind_Solver();
+  bool frozen_visc = config_container[iZone]->GetFrozen_Visc_Disc();
+  if ((kind_recording == MESH_COORDS) || (kind_recording == NONE)){
 
     /*--- Update geometry to get the influence on other geometry variables (normals, volume etc) ---*/
-    
+
     geometry_container[iZone][MESH_0]->UpdateGeometry(geometry_container[iZone], config_container[iZone]);
-    
+
   }
 
   /*--- Compute coupling between flow and turbulent equations ---*/
 
-  if (turbulent) {
-    solver_container[iZone][MESH_0][FLOW_SOL]->Preprocessing(geometry_container[iZone][MESH_0],solver_container[iZone][MESH_0], config_container[iZone], MESH_0, NO_RK_ITER, RUNTIME_FLOW_SYS, true);
+  solver_container[iZone][MESH_0][FLOW_SOL]->Set_MPI_Solution(geometry_container[iZone][MESH_0], config_container[iZone]);
 
+  if ((Kind_Solver == DISC_ADJ_RANS) && !frozen_visc){
+    solver_container[iZone][MESH_0][FLOW_SOL]->Preprocessing(geometry_container[iZone][MESH_0],solver_container[iZone][MESH_0], config_container[iZone], MESH_0, NO_RK_ITER, RUNTIME_FLOW_SYS, true);
     solver_container[iZone][MESH_0][TURB_SOL]->Postprocessing(geometry_container[iZone][MESH_0],solver_container[iZone][MESH_0], config_container[iZone], MESH_0);
+    solver_container[iZone][MESH_0][TURB_SOL]->Set_MPI_Solution(geometry_container[iZone][MESH_0], config_container[iZone]);
   }
 
 }
 
-void CDiscAdjMeanFlowIteration::RegisterOutput(CSolver ****solver_container, CGeometry ***geometry_container, CConfig **config_container, unsigned short iZone) {
+void CDiscAdjFluidIteration::RegisterOutput(CSolver ****solver_container, CGeometry ***geometry_container, CConfig **config_container, COutput* output, unsigned short iZone){
   
-  /*--- Register objective function as output of the iteration ---*/
+  unsigned short Kind_Solver = config_container[iZone]->GetKind_Solver();
+  bool frozen_visc = config_container[iZone]->GetFrozen_Visc_Disc();
   
-  solver_container[iZone][MESH_0][ADJFLOW_SOL]->RegisterObj_Func(config_container[iZone]);
+  if ((Kind_Solver == DISC_ADJ_NAVIER_STOKES) || (Kind_Solver == DISC_ADJ_RANS) || (Kind_Solver == DISC_ADJ_EULER)) {
   
   /*--- Register conservative variables as output of the iteration ---*/
   
-  solver_container[iZone][MESH_0][ADJFLOW_SOL]->RegisterOutput(geometry_container[iZone][MESH_0],config_container[iZone]);
+    solver_container[iZone][MESH_0][FLOW_SOL]->RegisterOutput(geometry_container[iZone][MESH_0],config_container[iZone]);
   
-  if (turbulent) {
-    solver_container[iZone][MESH_0][ADJTURB_SOL]->RegisterOutput(geometry_container[iZone][MESH_0],
+  }
+  if ((Kind_Solver == DISC_ADJ_RANS) && !frozen_visc){
+    solver_container[iZone][MESH_0][TURB_SOL]->RegisterOutput(geometry_container[iZone][MESH_0],
                                                                  config_container[iZone]);
   }
 }
 
-void CDiscAdjMeanFlowIteration::InitializeAdjoint(CSolver ****solver_container, CGeometry ***geometry_container, CConfig **config_container, unsigned short iZone) {
-  
-  /*--- Initialize the adjoint of the objective function (typically with 1.0) ---*/
-  
-  solver_container[iZone][MESH_0][ADJFLOW_SOL]->SetAdj_ObjFunc(geometry_container[iZone][MESH_0], config_container[iZone]);
-  
-  /*--- Initialize the adjoints the conservative variables ---*/
-  
-  solver_container[iZone][MESH_0][ADJFLOW_SOL]->SetAdjoint_Output(geometry_container[iZone][MESH_0],
-                                                                  config_container[iZone]);
-  
-  if (turbulent) {
-    solver_container[iZone][MESH_0][ADJTURB_SOL]->SetAdjoint_Output(geometry_container[iZone][MESH_0],
-                                                                    config_container[iZone]);
-  }
-}
-void CDiscAdjMeanFlowIteration::Update(COutput *output,
+void CDiscAdjFluidIteration::Update(COutput *output,
                                        CIntegration ***integration_container,
                                        CGeometry ***geometry_container,
                                        CSolver ****solver_container,
@@ -2158,11 +2211,26 @@ void CDiscAdjMeanFlowIteration::Update(COutput *output,
                                        CSurfaceMovement **surface_movement,
                                        CVolumetricMovement **grid_movement,
                                        CFreeFormDefBox*** FFDBox,
-                                       unsigned short val_iZone)      { }
-void CDiscAdjMeanFlowIteration::Monitor()     { }
-void CDiscAdjMeanFlowIteration::Output()      { }
-void CDiscAdjMeanFlowIteration::Postprocess() { }
+                                       unsigned short val_iZone)      {
 
+  unsigned short iMesh;
+
+  /*--- Dual time stepping strategy ---*/
+
+  if ((config_container[val_iZone]->GetUnsteady_Simulation() == DT_STEPPING_1ST) ||
+      (config_container[val_iZone]->GetUnsteady_Simulation() == DT_STEPPING_2ND)) {
+
+    for (iMesh = 0; iMesh <= config_container[val_iZone]->GetnMGLevels(); iMesh++) {
+      integration_container[val_iZone][ADJFLOW_SOL]->SetConvergence(false);
+    }
+  }
+}
+void CDiscAdjFluidIteration::Monitor()     { }
+void CDiscAdjFluidIteration::Output()      { }
+void CDiscAdjFluidIteration::Postprocess(CConfig **config_container,
+                                         CGeometry ***geometry_container,
+                                         CSolver ****solver_container,
+                                         unsigned short val_iZone) { }
 
 void FEM_StructuralIteration(COutput *output, CIntegration ***integration_container, CGeometry ***geometry_container,
                                  CSolver ****solver_container, CNumerics *****numerics_container, CConfig **config_container,
@@ -2435,5 +2503,550 @@ void FEM_StructuralIteration(COutput *output, CIntegration ***integration_contai
       integration_container[ZONE_0][FEA_SOL]->SetConvergence(true);
   }
 
+
+}
+
+
+int communicate(CConfig *config, CSolver ****solver_container, d6dof_t *angle, int iter, conn_t *conn)
+{
+/*
+ * function is a communication routine through 
+ * data link called "CFD2SIM"
+ * 
+ * the routine sends forces/moments and gets back rotation angles and displacement
+ * 
+ * created: 		Adam Jirasek
+ * date:		2014-03-05
+ * 
+ * input data:
+ * 	Forces_moments  	- vectors of double (10)
+ * 	ttime      	- time
+ * 	host_len	- length of host name
+ * 	host		- host name
+ * 	port		- port number
+ * 
+ * output data:
+ * 	phi, theta, psi - angles
+ *      rotation center
+ *      translation vector
+ */
+	node_t *Gnode=NULL, *TmpNode = NULL, *FoundNode = NULL;
+	size_t dim[1], tot_dim;
+
+	int sockfd, portno;
+
+//	char *name ="CFD2SIM";
+//	char *name1="SIM2CFD";
+
+	double *tmpfloat, Lift, Drag, Side, Ceff, Cmx, Cmy, Cmz, Cfx, Cfy, Cfz;
+	double deltaT, time;
+	client_fce_struct_t InpPar, *PInpPar;
+	opts_t *Popts_1, opts, opts_1, *Popts;
+	find_t *SFounds;
+	
+        string host  = config->GetCoSimEngineIP();
+        const char *hostname = host.c_str();
+        portno    = config->GetCoSimEnginePort();
+
+        host  = config->GetAe_Channel_O();
+        const char *name = host.c_str();
+
+        host  = config->GetAe_Channel_I();
+        const char *name1 = host.c_str();
+/*
+ * get forces/moments
+ */
+        Lift = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CL();
+        Drag = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CD();
+        Side = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CSF();
+        Ceff = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CEff();
+        Cmx =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CMx();
+        Cmy =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CMy();
+        Cmz =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CMz();
+        Cfx =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CFx();
+        Cfy =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CFy();
+        Cfz =  solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_CFz();
+/*
+ * set connection parameters (data link etc)
+ */
+	PInpPar = &InpPar;
+	PInpPar->channel_name = name;  /* name of channel */
+	PInpPar->SR_MODE = 'S';            /* process is sending data */
+	if ( (PInpPar->mode = get_exchange_channel_mode('D', 'N')) == -1)
+		Error("socket_SU2_2_Simul: wrong client mode");
+
+	Popts   = &opts;
+	Popts_1 = &opts_1;
+	m3l_set_Send_receive_tcpipsocket(&Popts_1);
+	m3l_set_Find(&Popts);
+/*
+ * create data structure which will be sent
+*/
+	if(  (Gnode = m3l_Mklist("CFD_2_SIM", "DIR", 0, NULL, (node_t **)NULL, (const char *)NULL, (const char *)NULL, (char *)NULL)) == 0)
+		Perror("socket_SU2_2_Simul: m3l_Mklist");
+	
+	dim[0] =10;
+/*
+ * store global forces moments
+ */
+	if(  (TmpNode = m3l_Mklist("ForcesMoments", "D", 1, dim, &Gnode, "/CFD_2_SIM", "./", (char *)NULL)) == 0)
+		Error("socket_SU2_2_Simul: m3l_Mklist");
+	TmpNode->data.df[0]= Lift;
+	TmpNode->data.df[1]= Drag;
+	TmpNode->data.df[2]= Side;
+	TmpNode->data.df[3]= Ceff;
+	TmpNode->data.df[4]= Cmx;
+	TmpNode->data.df[5]= Cmy;
+	TmpNode->data.df[6]= Cmz;
+	TmpNode->data.df[7]= Cfx;
+	TmpNode->data.df[8]= Cfy;
+	TmpNode->data.df[9]= Cfz;
+/*
+ * add time
+ */
+        deltaT = config->GetDelta_UnstTimeND();
+	time = static_cast<su2double>(iter)*deltaT;
+	dim[0] = 1;
+	if(  (TmpNode = m3l_Mklist("Time", "D", 1, dim, &Gnode, "/CFD_2_SIM", "./", (char *)NULL)) == 0)
+		Error("socket_SU2_2_Simul: m3l_Mklist");
+	TmpNode->data.df[0] = time;
+/*
+ * open socket
+ */
+	if( (sockfd = open_connection_to_server(hostname, portno, PInpPar, Popts_1)) < 1)
+		Error("socket_SU2_2_Simul: Error when opening socket");
+/*
+ * send data 
+ */
+	if ( client_sender(Gnode, sockfd, PInpPar, (opts_t *)NULL, (opts_t *)NULL) !=1 )
+		Error("socket_SU2_2_Simul: client_sender()");
+
+	if( close(sockfd) == -1)
+		Perror("socket_SU2_2_Simul: close");
+/*
+ * free borrowed memory
+ */
+	if(m3l_Umount(&Gnode) != 1)
+		Perror("socket_SU2_2_Simul: m3l_Umount");
+/*
+ * receive data 
+ */
+	PInpPar = &InpPar;
+	PInpPar->channel_name = name1;  /* name of channel for receiving data */
+	PInpPar->SR_MODE = 'R';             /* process is receiving data */
+	if ( (PInpPar->mode = get_exchange_channel_mode('D', 'N')) == -1)
+		Error("socket_SU2_2_Simul: wrong client mode");
+
+	Popts   = &opts;
+	Popts_1 = &opts_1;
+	m3l_set_Send_receive_tcpipsocket(&Popts_1);
+	m3l_set_Find(&Popts);
+
+	if( (sockfd = open_connection_to_server(hostname, portno, PInpPar, Popts_1)) < 1)
+		Error("client_sender: Error when opening socket");
+
+	if ( (Gnode = client_receiver(sockfd, PInpPar, (opts_t *)NULL, (opts_t *)NULL)) == NULL)
+		Error("socket_SU2_2_Simul: client_receiver()");
+/*
+ * close socket 
+ */
+	if( close(sockfd) == -1)
+		Perror("socket_SU2_2_Simul: close");
+/*
+ * find Angles - rotation matrix and copy the values to Edge allocated memory
+ */
+	if( (SFounds = m3l_Locate(Gnode, "/SIM_2_CFD/Angles", "/*/*",  (char *)NULL)) != NULL){
+
+		if( m3l_get_Found_number(SFounds) != 1)
+			Error("socket_SU2_2_Simul: More then one Angles data set found");
+/* 
+ * pointer to list of found nodes
+ */
+		if( (FoundNode = m3l_get_Found_node(SFounds, 0)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find 1st data pointer");
+		if( (tot_dim = m3l_get_List_totdim(FoundNode)) != 3)
+			Error("socket_SU2_2_Simul: Wrong dimensions of Angles array");
+		if( (tmpfloat = (double *)m3l_get_data_pointer(FoundNode)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find Angles data pointer");
+			angle->angles[0] = tmpfloat[0];
+			angle->angles[1] = tmpfloat[1];
+			angle->angles[2] = tmpfloat[2];
+/* 
+ * free memory allocated in m3l_Locate
+ */
+		m3l_DestroyFound(&SFounds);
+	}
+	else
+	{
+		Error("socket_SU2_2_Simul: Angles not found\n");
+	}
+
+
+/*
+ * find Translation - rotation matrix and copy the values to Edge allocated memory
+ */
+	if( (SFounds = m3l_Locate(Gnode, "/SIM_2_CFD/TransVec", "/*/*",  (char *)NULL)) != NULL){
+
+		if( m3l_get_Found_number(SFounds) != 1)
+			Error("socket_SU2_2_Simul: More then one TransVec data set found");
+/* 
+ * pointer to list of found nodes
+ */
+		if( (FoundNode = m3l_get_Found_node(SFounds, 0)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find 1st data pointer");
+		if( (tot_dim = m3l_get_List_totdim(FoundNode)) != 3)
+			Error("socket_SU2_2_Simul: Wrong dimensions of Angles array");
+		if( (tmpfloat = (double *)m3l_get_data_pointer(FoundNode)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find TransVec data pointer");
+			angle->transvec[0] = tmpfloat[0];
+			angle->transvec[1] = tmpfloat[1];
+			angle->transvec[2] = tmpfloat[2];
+/* 
+ * free memory allocated in m3l_Locate
+ */
+		m3l_DestroyFound(&SFounds);
+	}
+	else
+	{
+		Error("socket_SU2_2_Simul: TransVec not found\n");
+	}
+
+
+/*
+ * find center of rotation
+ */
+	if( (SFounds = m3l_Locate(Gnode, "/SIM_2_CFD/RotCenter", "/*/*",  (char *)NULL)) != NULL){
+
+		if( m3l_get_Found_number(SFounds) != 1)
+			Error("socket_SU2_2_Simul: More then one RotCenter data set found");
+/* 
+ * pointer to list of found nodes
+ */
+		if( (FoundNode = m3l_get_Found_node(SFounds, 0)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find 1st data pointer");
+		if( (tmpfloat = (double *)m3l_get_data_pointer(FoundNode)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find RotCenter data pointer");
+		
+		angle->rotcenter[0] = tmpfloat[0];
+		angle->rotcenter[1] = tmpfloat[1];
+		angle->rotcenter[2] = tmpfloat[2];
+/* 
+ * free memory allocated in m3l_Locate
+ */
+		m3l_DestroyFound(&SFounds);
+	}
+	else
+	{
+		Error("socket_SU2_2_Simul: RotCenter not found\n");
+	}
+/*
+ * find center of translation
+ */
+	if( (SFounds = m3l_Locate(Gnode, "/SIM_2_CFD/TransVec", "/*/*",  (char *)NULL)) != NULL){
+
+		if( m3l_get_Found_number(SFounds) != 1)
+			Error("socket_SU2_2_Simul: More then one TransVec data set found");
+/* 
+ * pointer to list of found nodes
+ */
+		if( (FoundNode = m3l_get_Found_node(SFounds, 0)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find 1st data pointer");
+		if( (tmpfloat = (double *)m3l_get_data_pointer(FoundNode)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find TransVec data pointer");
+
+		angle->transvec[0] = tmpfloat[0];
+		angle->transvec[1] = tmpfloat[1];
+		angle->transvec[2] = tmpfloat[2];
+/* 
+ * free memory allocated in m3l_Locate
+ */
+		m3l_DestroyFound(&SFounds);
+	}
+	else
+	{
+		Error("socket_SU2_2_Simul: TransVec not found\n");
+	}
+/*
+ * free borrowed memory
+ */
+	if(m3l_Umount(&Gnode) != 1)
+		Perror("socket_SU2_2_Simul: m3l_Umount");
+	return 0;
+}
+
+
+
+
+
+int communicateBSCW(CConfig *config, CSolver ****solver_container, d6dof_t *angle, int iter, conn_t *conn, char* action, long COMITER)
+{
+/*
+ * function is a communication routine through 
+ * data link called "CFD2SIM"
+ * 
+ * the routine sends forces/moments and gets back rotation angles and displacement
+ * 
+ * created: 		Adam Jirasek
+ * date:		2014-03-05
+ * 
+ * input data:
+ * 	Forces_moments  	- vectors of double (10)
+ * 	ttime      	- time
+ * 	host_len	- length of host name
+ * 	host		- host name
+ * 	port		- port number
+ * 
+ * output data:
+ * 	phi, theta, psi - angles
+ *      rotation center
+ *      translation vector
+ */
+	node_t *Gnode=NULL, *TmpNode = NULL, *FoundNode = NULL;
+	size_t dim[1], tot_dim;
+
+	int sockfd, portno;
+
+//	char *name ="CFD2SIM";
+//	char *name1="SIM2CFD";
+
+	double *tmpfloat, ModForce1, ModForce2;
+	double deltaT, time;
+	client_fce_struct_t InpPar, *PInpPar;
+	opts_t *Popts_1, opts, opts_1, *Popts;
+	find_t *SFounds;
+
+        string host  = config->GetCoSimEngineIP();
+        const char *hostname = host.c_str();
+        portno    = config->GetCoSimEnginePort();
+
+        string host1  = config->GetAe_Channel_O();
+        const char *name = host1.c_str();
+
+        string host2  = config->GetAe_Channel_I();
+        const char *name1 = host2.c_str();
+/*
+ * modal forces
+ */
+        ModForce1 = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_ModalF1();
+        ModForce2 = solver_container[ZONE_0][MESH_0][FLOW_SOL]->GetTotal_ModalF2();
+/*
+ * set connection parameters (data link etc)
+ */
+	PInpPar = &InpPar;
+	PInpPar->channel_name = name;  /* name of channel */
+	PInpPar->SR_MODE = 'S';            /* process is sending data */
+	if ( (PInpPar->mode = get_exchange_channel_mode('D', 'N')) == -1)
+		Error("socket_SU2_2_Str: wrong client mode");
+
+	Popts   = &opts;
+	Popts_1 = &opts_1;
+	m3l_set_Send_receive_tcpipsocket(&Popts_1);
+	m3l_set_Find(&Popts);
+/*
+ * create data structure which will be sent
+*/
+	if(  (Gnode = m3l_Mklist("CFD_2_STR", "DIR", 0, NULL, (node_t **)NULL, (const char *)NULL, (const char *)NULL, (char *)NULL)) == 0)
+		Perror("socket_SU2_2_Str: m3l_Mklist");
+	
+	dim[0] =2;
+/*
+ * store global forces moments
+ */
+	if(  (TmpNode = m3l_Mklist("ModalF", "D", 1, dim, &Gnode, "/CFD_2_STR", "./", (char *)NULL)) == 0)
+		Error("socket_SU2_2_Str: m3l_Mklist");
+	TmpNode->data.df[0]= ModForce1;
+	TmpNode->data.df[1]= ModForce2;
+/*
+ * add time and delta T
+ */
+        deltaT = config->GetDelta_UnstTimeND();
+	time = static_cast<su2double>(iter)*deltaT;
+	dim[0] = 1;
+	if(  (TmpNode = m3l_Mklist("Time", "D", 1, dim, &Gnode, "/CFD_2_STR", "./", (char *)NULL)) == 0)
+		Error("socket_SU2_2_Str: m3l_Mklist");
+	TmpNode->data.df[0] = time;
+	if(  (TmpNode = m3l_Mklist("DT", "D", 1, dim, &Gnode, "/CFD_2_STR", "./", (char *)NULL)) == 0)
+		Error("socket_SU2_2_Str: m3l_Mklist");
+	TmpNode->data.df[0] = deltaT;
+/*
+ * add frequency of comminication
+ */
+	if(  (TmpNode = m3l_Mklist("COMFREQ", "I", 1, dim, &Gnode, "/CFD_2_STR", "./", (char *)NULL)) == 0)
+		Error("socket_SU2_2_Str: m3l_Mklist");
+	TmpNode->data.i[0] = COMITER;
+/*
+ * add position in loop  (when making node, use --no-malloc, 
+ * action is already malloced and you just point to it
+ */
+	dim[0] = strlen(action);
+	if(  (TmpNode = m3l_Mklist("Action", "C", 1, dim, &Gnode, "/CFD_2_STR", "./", "--no_malloc", (char *)NULL)) == 0)
+		Error("socket_SU2_2_Str: m3l_Mklist");
+	TmpNode->data.c = action;
+/*
+ * open socket
+ */
+	if( (sockfd = open_connection_to_server(hostname, portno, PInpPar, Popts_1)) < 1)
+		Error("socket_SU2_2_Simul: Error when opening socket");
+/*
+ * send data 
+ */
+	if ( client_sender(Gnode, sockfd, PInpPar, (opts_t *)NULL, (opts_t *)NULL) !=1 )
+		Error("socket_SU2_2_Str: client_sender()");
+
+	if( close(sockfd) == -1)
+		Perror("socket_SU2_2_Str: close");
+/*
+ * free borrowed memory
+ */
+	if(m3l_Umount(&Gnode) != 1)
+		Perror("socket_SU2_2_Str: m3l_Umount");
+/*
+ * receive data 
+ */
+	PInpPar = &InpPar;
+	PInpPar->channel_name = name1;  /* name of channel for receiving data */
+	PInpPar->SR_MODE = 'R';             /* process is receiving data */
+	if ( (PInpPar->mode = get_exchange_channel_mode('D', 'N')) == -1)
+		Error("socket_SU2_2_Str: wrong client mode");
+
+	Popts   = &opts;
+	Popts_1 = &opts_1;
+	m3l_set_Send_receive_tcpipsocket(&Popts_1);
+	m3l_set_Find(&Popts);
+
+	if( (sockfd = open_connection_to_server(hostname, portno, PInpPar, Popts_1)) < 1)
+		Error("client_sender: Error when opening socket");
+
+	if ( (Gnode = client_receiver(sockfd, PInpPar, (opts_t *)NULL, (opts_t *)NULL)) == NULL)
+		Error("socket_SU2_2_Str: client_receiver()");
+/*
+ * close socket 
+ */
+	if( close(sockfd) == -1)
+		Perror("socket_SU2_2_Str: close");
+
+// 		if(m3l_Cat(Gnode, "--detailed", "-P", "-L",  "*",   (char *)NULL) != 0)
+// 		Error("CatData");
+/*
+ * find Angles - rotation matrix and copy the values to Edge allocated memory
+ */
+	if( (SFounds = m3l_Locate(Gnode, "/STR_2_CFD/Angles", "/*/*",  (char *)NULL)) != NULL){
+
+		if( m3l_get_Found_number(SFounds) != 1)
+			Error("socket_SU2_2_Str: More then one Angles data set found");
+/* 
+ * pointer to list of found nodes
+ */
+		if( (FoundNode = m3l_get_Found_node(SFounds, 0)) == NULL)
+			Error("socket_SU2_2_Str: Did not find 1st data pointer");
+		if( (tot_dim = m3l_get_List_totdim(FoundNode)) != 3)
+			Error("socket_SU2_2_Str: Wrong dimensions of Angles array");
+		if( (tmpfloat = (double *)m3l_get_data_pointer(FoundNode)) == NULL)
+			Error("socket_SU2_2_Str: Did not find Angles data pointer");
+			angle->angles[0] = tmpfloat[0];
+			angle->angles[1] = tmpfloat[1];
+			angle->angles[2] = tmpfloat[2];
+/* 
+ * free memory allocated in m3l_Locate
+ */
+		m3l_DestroyFound(&SFounds);
+	}
+	else
+	{
+		Error("socket_SU2_2_Str: Angles not found\n");
+	}
+
+/*
+ * find Translation - rotation matrix and copy the values to Edge allocated memory
+ */
+	if( (SFounds = m3l_Locate(Gnode, "/STR_2_CFD/TransVec", "/*/*",  (char *)NULL)) != NULL){
+
+		if( m3l_get_Found_number(SFounds) != 1)
+			Error("socket_SU2_2_Simul: More then one TransVec data set found");
+/* 
+ * pointer to list of found nodes
+ */
+		if( (FoundNode = m3l_get_Found_node(SFounds, 0)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find 1st data pointer");
+		if( (tot_dim = m3l_get_List_totdim(FoundNode)) != 3)
+			Error("socket_SU2_2_Simul: Wrong dimensions of Angles array");
+		if( (tmpfloat = (double *)m3l_get_data_pointer(FoundNode)) == NULL)
+			Error("socket_SU2_2_Simul: Did not find TransVec data pointer");
+			angle->transvec[0] = tmpfloat[0];
+			angle->transvec[1] = tmpfloat[1];
+			angle->transvec[2] = tmpfloat[2];
+/* 
+ * free memory allocated in m3l_Locate
+ */
+		m3l_DestroyFound(&SFounds);
+	}
+	else
+	{
+		Error("socket_SU2_2_Simul: TransVec not found\n");
+	}
+
+
+
+/*
+ * find center of rotation
+ */
+	if( (SFounds = m3l_Locate(Gnode, "/STR_2_CFD/RotCenter", "/*/*",  (char *)NULL)) != NULL){
+
+		if( m3l_get_Found_number(SFounds) != 1)
+			Error("socket_SU2_2_Str: More then one RotCenter data set found");
+/* 
+ * pointer to list of found nodes
+ */
+		if( (FoundNode = m3l_get_Found_node(SFounds, 0)) == NULL)
+			Error("socket_SU2_2_Str: Did not find 1st data pointer");
+		if( (tmpfloat = (double *)m3l_get_data_pointer(FoundNode)) == NULL)
+			Error("socket_SU2_2_Str: Did not find RotCenter data pointer");
+		
+		angle->rotcenter[0] = tmpfloat[0];
+		angle->rotcenter[1] = tmpfloat[1];
+		angle->rotcenter[2] = tmpfloat[2];
+/* 
+ * free memory allocated in m3l_Locate
+ */
+		m3l_DestroyFound(&SFounds);
+	}
+	else
+	{
+		Error("socket_SU2_2_Simul: RotCenter not found\n");
+	}
+/*
+ * find center of translation
+ */
+	if( (SFounds = m3l_Locate(Gnode, "/STR_2_CFD/TransVec", "/*/*",  (char *)NULL)) != NULL){
+
+		if( m3l_get_Found_number(SFounds) != 1)
+			Error("socket_SU2_2_Str: More then one TransVec data set found");
+/* 
+ * pointer to list of found nodes
+ */
+		if( (FoundNode = m3l_get_Found_node(SFounds, 0)) == NULL)
+			Error("socket_SU2_2_Str: Did not find 1st data pointer");
+		if( (tmpfloat = (double *)m3l_get_data_pointer(FoundNode)) == NULL)
+			Error("socket_SU2_2_Str: Did not find TransVec data pointer");
+
+		angle->transvec[0] = tmpfloat[0];
+		angle->transvec[1] = tmpfloat[1];
+		angle->transvec[2] = tmpfloat[2];
+/* 
+ * free memory allocated in m3l_Locate
+ */
+		m3l_DestroyFound(&SFounds);
+	}
+	else
+	{
+		Error("socket_SU2_2_Str: TransVec not found\n");
+	}
+/*
+ * free borrowed memory
+ */
+	if(m3l_Umount(&Gnode) != 1)
+		Perror("socket_SU2_2_Str: m3l_Umount");
+
+        return 0;
 
 }

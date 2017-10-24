@@ -33,11 +33,6 @@
 
 #include "../include/transport_model.hpp"
 
-
-/*-------------------------------------------------*/
-/*----------- Dynamic Viscosity Models ------------*/
-/*-------------------------------------------------*/
-
 CViscosityModel::CViscosityModel(void) {
 
   /*--- Attributes initialization ---*/

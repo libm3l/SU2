@@ -33,7 +33,6 @@
 
 #pragma once
 
-
 namespace AD{
 #if defined CODI_REVERSE_TYPE
 

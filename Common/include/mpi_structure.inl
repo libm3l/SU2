@@ -33,7 +33,6 @@
 
 #pragma once
 
-
 #ifdef HAVE_MPI
 inline void CMPIWrapper::Init(int *argc, char ***argv) {
   MPI_Init(argc,argv);
