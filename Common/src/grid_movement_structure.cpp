@@ -2538,9 +2538,22 @@ void CVolumetricMovement::D6dof_motion(CGeometry *geometry, CConfig *config,
   dyo = motion_data_old->transvec[1];
   dzo = motion_data_old->transvec[2];
 
-  rotXold = motion_data_old->rotcenter[0];
-  rotYold = motion_data_old->rotcenter[1];
-  rotZold = motion_data_old->rotcenter[2];
+  if(status_run == 0){
+   dthetao = 0;
+   dphio = 0;
+   dpsio = 0;}
+
+   dxo = 0;
+   dyo= 0;
+   dzo = 0;
+   dx = 0;
+   dy= 0;
+   dz= 0;
+
+
+  rotXold = 0.2023  ;  //motion_data_old->rotcenter[0];
+  rotYold = 0. ;  //motion_data_old->rotcenter[1];
+  rotZold = 0.;   //motion_data_old->rotcenter[2];
 
   rotX = rotXold;
   rotY = rotYold;
